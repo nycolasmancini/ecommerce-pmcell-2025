@@ -356,7 +356,7 @@ export async function deleteProductRelations(productId: string) {
     }
   ]
   
-  const results = {}
+  const results: Record<string, number> = {}
   
   // Executar todas as exclusões das relações
   for (const deleteOp of deleteQueries) {
