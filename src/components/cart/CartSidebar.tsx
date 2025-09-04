@@ -120,7 +120,8 @@ export function CartSidebar() {
     // Capturar dados do pedido
     setOrderData({
       subtotal: subtotal,
-      itemsCount: totalQuantity
+      itemsCount: totalQuantity,
+      customerName: ''  // Será preenchido depois no handleCustomerSubmit
     })
     
     // Abrir modal de nome ao invés da tela de sucesso
