@@ -13,7 +13,7 @@ function generateOrderNumber() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { customer, items, notes } = body
+    const { customer, items, notes, originalWhatsapp } = body
 
     // Validar WhatsApp brasileiro
     const whatsappRegex = /^55\d{10,11}$/
@@ -128,10 +128,10 @@ export async function POST(request: NextRequest) {
         // Criar pedido
         const orderNumber = generateOrderNumber()
         const orderResult = await pool.query(`
-          INSERT INTO "Order" (id, "orderNumber", "customerId", subtotal, discount, total, status, notes, "createdAt", "updatedAt")
-          VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+          INSERT INTO "Order" (id, "orderNumber", "customerId", subtotal, discount, total, status, notes, "originalWhatsapp", "createdAt", "updatedAt")
+          VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
           RETURNING *
-        `, [orderNumber, dbCustomer.id, subtotal, 0, subtotal, 'PENDING', notes || null])
+        `, [orderNumber, dbCustomer.id, subtotal, 0, subtotal, 'PENDING', notes || null, originalWhatsapp || cleanWhatsapp])
         const order = orderResult.rows[0]
 
         // Criar itens do pedido
@@ -280,6 +280,7 @@ export async function POST(request: NextRequest) {
         subtotal,
         total: subtotal,
         notes,
+        originalWhatsapp: originalWhatsapp || cleanWhatsapp,
         items: {
           create: orderItems
         }

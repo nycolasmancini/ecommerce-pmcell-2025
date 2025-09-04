@@ -25,6 +25,30 @@ export async function PATCH(
     // Preparar dados para atualização
     const updateData: any = {}
 
+    // Atualizar nome do cliente se fornecido
+    if (body.customerName) {
+      await prisma.customer.update({
+        where: { id: existingOrder.customerId },
+        data: { name: body.customerName.trim() }
+      })
+    }
+
+    // Atualizar finalWhatsapp se fornecido
+    if (body.finalWhatsapp) {
+      // Validar WhatsApp brasileiro
+      const whatsappRegex = /^55\d{10,11}$/
+      const cleanWhatsapp = body.finalWhatsapp.replace(/\D/g, '')
+      
+      if (!whatsappRegex.test(cleanWhatsapp)) {
+        return NextResponse.json(
+          { error: 'WhatsApp final inválido. Use o formato brasileiro com DDD.' },
+          { status: 400 }
+        )
+      }
+      
+      updateData.finalWhatsapp = body.finalWhatsapp
+    }
+
     // Atualizar status se fornecido
     if (body.status) {
       updateData.status = body.status

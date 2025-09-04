@@ -237,6 +237,10 @@ model Order {
   status         OrderStatus @default(PENDING)
   assignedSeller String?     // Vendedor atribuído via webhook
   
+  // WhatsApp tracking
+  originalWhatsapp String?   // WhatsApp usado para liberar preços
+  finalWhatsapp    String?   // WhatsApp confirmado/alterado na finalização
+  
   // Observações
   notes          String?
   internalNotes  String?     // Notas internas (não visível ao cliente)

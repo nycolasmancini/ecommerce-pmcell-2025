@@ -6,15 +6,21 @@ import SuperWholesaleUpgrade from '@/components/cart/SuperWholesaleUpgrade'
 import MinimumOrderAlert from '@/components/cart/MinimumOrderAlert'
 import Toast from '@/components/ui/Toast'
 import { OrderCompletionSidebar } from '@/components/cart/OrderCompletionSidebar'
+import CustomerNameModal from '@/components/cart/CustomerNameModal'
 import { useToast } from '@/hooks/useToast'
 import { useCartStore } from '@/stores/useCartStore'
+import { useSession } from '@/contexts/SessionContext'
 import { formatPrice } from '@/lib/utils'
 
 export default function CarrinhoPage() {
   const { toasts, showToast, removeToast } = useToast()
+  const { whatsapp } = useSession()
   const alertRef = useRef<HTMLDivElement>(null)
+  const [showCustomerNameModal, setShowCustomerNameModal] = useState(false)
   const [showOrderCompletion, setShowOrderCompletion] = useState(false)
   const [orderNumber, setOrderNumber] = useState(0)
+  const [orderId, setOrderId] = useState<string>('')
+  const [customerName, setCustomerName] = useState('')
   
   // Usar dados reais do carrinho
   const {
@@ -63,12 +69,85 @@ export default function CarrinhoPage() {
       return
     }
     
-    // Gerar número do pedido temporário (será substituído pela API)
-    const tempOrderNumber = Date.now()
-    setOrderNumber(tempOrderNumber)
-    
-    // Abrir modal de finalização
-    setShowOrderCompletion(true)
+    // Abrir modal para coleta do nome do cliente
+    setShowCustomerNameModal(true)
+  }
+
+  const handleCustomerSubmit = async (data: {
+    customerName: string
+    originalWhatsapp: string
+    finalWhatsapp: string
+  }) => {
+    try {
+      console.log('Dados do cliente:', data)
+      
+      // 1. Primeiro, criar o pedido imediatamente
+      const orderData = {
+        customer: {
+          name: '', // Nome vazio inicialmente
+          whatsapp: data.originalWhatsapp,
+          email: '',
+          company: '',
+          cnpj: ''
+        },
+        items: cartItems.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          modelId: item.modelId || undefined,
+          modelName: item.modelName || undefined
+        })),
+        notes: '',
+        originalWhatsapp: data.originalWhatsapp
+      }
+
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erro ao criar pedido')
+      }
+
+      const order = await response.json()
+      console.log('Pedido criado:', order)
+
+      // 2. Atualizar o pedido com nome do cliente e WhatsApp final
+      const updateResponse = await fetch(`/api/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customerName: data.customerName,
+          finalWhatsapp: data.finalWhatsapp
+        }),
+      })
+
+      if (!updateResponse.ok) {
+        console.error('Erro ao atualizar pedido, mas pedido foi criado')
+      }
+
+      // 3. Configurar dados para tela de sucesso
+      setOrderId(order.id)
+      setOrderNumber(parseInt(order.orderNumber))
+      setCustomerName(data.customerName)
+      
+      // 4. Fechar modal de nome e mostrar tela de sucesso
+      setShowCustomerNameModal(false)
+      setShowOrderCompletion(true)
+      
+    } catch (error) {
+      console.error('Erro ao processar pedido:', error)
+      showToast(
+        `Erro ao processar pedido: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        'error'
+      )
+    }
   }
 
   return (
@@ -264,6 +343,15 @@ export default function CarrinhoPage() {
         />
       ))}
       
+      {/* Customer Name Modal */}
+      <CustomerNameModal
+        isOpen={showCustomerNameModal}
+        onClose={() => setShowCustomerNameModal(false)}
+        onSubmit={handleCustomerSubmit}
+        totalValue={totalValue}
+        itemsCount={totalQuantity}
+      />
+
       {/* Order Completion Sidebar */}
       <OrderCompletionSidebar
         isOpen={showOrderCompletion}
@@ -272,6 +360,7 @@ export default function CarrinhoPage() {
         orderNumber={orderNumber}
         subtotal={totalValue}
         itemsCount={totalQuantity}
+        customerName={customerName}
       />
     </div>
   )
