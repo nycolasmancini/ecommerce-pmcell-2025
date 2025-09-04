@@ -38,11 +38,6 @@ export async function GET(request: NextRequest) {
       }
 
       try {
-        const categoryId = searchParams.get('categoryId')
-        const featured = searchParams.get('featured')
-        const search = searchParams.get('search')
-        const page = parseInt(searchParams.get('page') || '1')
-        const limit = parseInt(searchParams.get('limit') || '12')
         const offset = (page - 1) * limit
 
         let whereConditions = []
