@@ -79,18 +79,41 @@ export async function PATCH(
     }
 
     // Realizar a atualização
-    const updatedOrder = await prisma.order.update({
-      where: { id },
-      data: updateData,
-      include: {
-        customer: true,
-        items: {
-          include: {
-            product: true
+    let updatedOrder
+    try {
+      updatedOrder = await prisma.order.update({
+        where: { id },
+        data: updateData,
+        include: {
+          customer: true,
+          items: {
+            include: {
+              product: true
+            }
           }
         }
+      })
+    } catch (error: any) {
+      // Se erro relacionado a campos WhatsApp, tentar sem eles
+      if (error.message && error.message.includes('finalWhatsapp')) {
+        console.log('🔄 finalWhatsapp field not found, updating without it')
+        const { finalWhatsapp, ...updateDataWithoutWhatsapp } = updateData
+        updatedOrder = await prisma.order.update({
+          where: { id },
+          data: updateDataWithoutWhatsapp,
+          include: {
+            customer: true,
+            items: {
+              include: {
+                product: true
+              }
+            }
+          }
+        })
+      } else {
+        throw error
       }
-    })
+    }
 
     // Criar log do webhook se o status foi alterado
     if (body.status && body.status !== existingOrder.status) {

@@ -127,12 +127,32 @@ export async function POST(request: NextRequest) {
 
         // Criar pedido
         const orderNumber = generateOrderNumber()
-        const orderResult = await pool.query(`
-          INSERT INTO "Order" (id, "orderNumber", "customerId", subtotal, discount, total, status, notes, "originalWhatsapp", "createdAt", "updatedAt")
-          VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-          RETURNING *
-        `, [orderNumber, dbCustomer.id, subtotal, 0, subtotal, 'PENDING', notes || null, originalWhatsapp || cleanWhatsapp])
-        const order = orderResult.rows[0]
+        let order
+        
+        try {
+          // Tentar criar com campos novos de WhatsApp tracking
+          const orderResult = await pool.query(`
+            INSERT INTO "Order" (id, "orderNumber", "customerId", subtotal, discount, total, status, notes, "originalWhatsapp", "createdAt", "updatedAt")
+            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+            RETURNING *
+          `, [orderNumber, dbCustomer.id, subtotal, 0, subtotal, 'PENDING', notes || null, originalWhatsapp || cleanWhatsapp])
+          order = orderResult.rows[0]
+          
+        } catch (error: any) {
+          // Se erro de coluna não existir (código 42703), usar fallback sem campos novos
+          if (error.code === '42703') {
+            console.log('🔄 WhatsApp tracking columns not found, using fallback without originalWhatsapp field')
+            const fallbackResult = await pool.query(`
+              INSERT INTO "Order" (id, "orderNumber", "customerId", subtotal, discount, total, status, notes, "createdAt", "updatedAt")
+              VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+              RETURNING *
+            `, [orderNumber, dbCustomer.id, subtotal, 0, subtotal, 'PENDING', notes || null])
+            order = fallbackResult.rows[0]
+          } else {
+            // Outros erros devem ser propagados
+            throw error
+          }
+        }
 
         // Criar itens do pedido
         for (const orderItem of orderItems) {

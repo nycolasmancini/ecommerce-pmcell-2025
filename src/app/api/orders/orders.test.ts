@@ -145,6 +145,60 @@ describe('/api/orders', () => {
       
       expect(response.status).toBe(400)
     })
+
+    test('should handle fallback when originalWhatsapp column does not exist', async () => {
+      // Simular erro de coluna não existir (código PostgreSQL 42703)
+      const columnNotExistError = new Error('column "originalWhatsapp" of relation "Order" does not exist')
+      columnNotExistError.code = '42703'
+      
+      // Mock para primeira tentativa falhar com erro de coluna
+      const mockPool = {
+        query: jest.fn()
+          .mockRejectedValueOnce(columnNotExistError) // Primeira tentativa falha
+          .mockResolvedValueOnce({ // Segunda tentativa (fallback) funciona
+            rows: [{
+              id: 'order-123',
+              orderNumber: '20241201001',
+              customerId: 'customer-1',
+              subtotal: 300.00,
+              total: 300.00
+            }]
+          })
+      }
+      
+      // Mock customer e product queries
+      mockPrisma.customer.findUnique.mockResolvedValue(null)
+      mockPrisma.customer.create.mockResolvedValue({
+        id: 'customer-1',
+        name: 'João Silva',
+        whatsapp: '5511999999999'
+      })
+      
+      // Override do pool para este teste
+      jest.mock('@/lib/db', () => ({ pool: mockPool }), { virtual: true })
+      
+      const request = new NextRequest('http://localhost/api/orders', {
+        method: 'POST',
+        body: JSON.stringify(validOrderData)
+      })
+
+      const response = await POST(request)
+      
+      expect(response.status).toBe(201)
+      expect(mockPool.query).toHaveBeenCalledTimes(2)
+      
+      // Primeira chamada deve ter tentado com originalWhatsapp
+      expect(mockPool.query).toHaveBeenNthCalledWith(1, 
+        expect.stringContaining('originalWhatsapp'), 
+        expect.any(Array)
+      )
+      
+      // Segunda chamada deve ser o fallback sem originalWhatsapp
+      expect(mockPool.query).toHaveBeenNthCalledWith(2,
+        expect.not.stringContaining('originalWhatsapp'),
+        expect.any(Array)
+      )
+    })
   })
 
   describe('PATCH /api/orders/[id]', () => {
