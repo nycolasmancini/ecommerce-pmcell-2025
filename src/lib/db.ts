@@ -379,36 +379,61 @@ export async function deleteProduct(productId: string) {
     throw new Error('Invalid product ID')
   }
 
+  console.log('🗑️ Starting deleteProduct for:', productId)
+  
   try {
     // Primeiro, verificar se o produto existe
+    console.log('🔍 Checking if product exists...')
     const checkResult = await query(
-      'SELECT "id" FROM "Product" WHERE "id" = $1', 
+      'SELECT "id", "name" FROM "Product" WHERE "id" = $1', 
       [productId]
     )
     
     if (!checkResult || !checkResult.rows || checkResult.rows.length === 0) {
+      console.log('❌ Product not found in database:', productId)
       throw new Error('Product not found')
     }
 
+    const productInfo = checkResult.rows[0]
+    console.log('✅ Product found:', productInfo)
+
     // Excluir todas as relações primeiro
+    console.log('🔗 Deleting relations...')
     const deletedRelations = await deleteProductRelations(productId)
+    console.log('✅ Relations deleted:', deletedRelations)
     
     // Por último, excluir o produto
+    console.log('🗑️ Deleting main product record...')
     const deleteResult = await query(
       'DELETE FROM "Product" WHERE "id" = $1 RETURNING "id", "name"',
       [productId]
     )
     
     if (!deleteResult || !deleteResult.rows || deleteResult.rows.length === 0) {
+      console.error('❌ Failed to delete product from database - no rows returned')
       throw new Error('Failed to delete product')
     }
     
     const deletedProduct = deleteResult.rows[0]
-    console.log('Product deleted successfully:', {
+    console.log('✅ Product deleted successfully:', {
       id: deletedProduct.id,
       name: deletedProduct.name,
       relationsDeleted: deletedRelations
     })
+
+    // Verificar se realmente foi excluído
+    console.log('🔍 Verifying deletion...')
+    const verifyResult = await query(
+      'SELECT "id" FROM "Product" WHERE "id" = $1', 
+      [productId]
+    )
+    
+    if (verifyResult && verifyResult.rows && verifyResult.rows.length > 0) {
+      console.error('❌ CRITICAL: Product still exists after deletion!')
+      throw new Error('Product deletion verification failed - product still exists')
+    }
+    
+    console.log('✅ Deletion verified - product no longer exists in database')
     
     return {
       success: true,
@@ -416,7 +441,7 @@ export async function deleteProduct(productId: string) {
       relationsDeleted: deletedRelations
     }
   } catch (error) {
-    console.error('Error in deleteProduct:', error)
+    console.error('❌ Error in deleteProduct:', error)
     throw error
   }
 }

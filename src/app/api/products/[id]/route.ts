@@ -495,11 +495,32 @@ export async function DELETE(
       const deleteResult = await deleteProduct(id)
       
       if (!deleteResult.success) {
+        console.error('❌ deleteProduct returned failure:', deleteResult)
         return NextResponse.json({ error: 'Falha ao excluir produto' }, { status: 500 })
       }
 
       console.log('✅ Produto excluído com sucesso (produção):', deleteResult)
-      return NextResponse.json({ message: 'Produto excluído com sucesso' })
+      
+      // Verificação dupla - confirmar que produto não existe mais
+      console.log('🔍 Double-checking product deletion in production...')
+      const doubleCheckResult = await dbQuery(
+        'SELECT "id", "name", "isActive" FROM "Product" WHERE "id" = $1',
+        [id]
+      )
+      
+      if (doubleCheckResult && doubleCheckResult.rows && doubleCheckResult.rows.length > 0) {
+        console.error('❌ CRITICAL ISSUE: Product still exists after deletion!', doubleCheckResult.rows[0])
+        return NextResponse.json({ 
+          error: 'Produto aparenta ter sido excluído, mas ainda existe no banco de dados. Tente novamente.' 
+        }, { status: 500 })
+      }
+      
+      console.log('✅ Double-check confirmed: product no longer exists')
+      return NextResponse.json({ 
+        message: 'Produto excluído com sucesso',
+        deleted: deleteResult.product,
+        relationsDeleted: deleteResult.relationsDeleted
+      })
       
     } else {
       console.log('🗑️ Excluindo produto via Prisma (desenvolvimento):', id)

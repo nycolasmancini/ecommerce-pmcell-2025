@@ -119,7 +119,15 @@ export default function AdminProdutos() {
   const loadProducts = async () => {
     try {
       console.log('🔍 Buscando produtos...')
-      const response = await fetch('/api/products?admin=true')
+      // Evitar cache do browser com timestamp
+      const timestamp = new Date().getTime()
+      const response = await fetch(`/api/products?admin=true&t=${timestamp}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      })
       console.log('📡 Response status:', response.status, 'ok:', response.ok)
       
       if (response.ok) {
