@@ -122,7 +122,8 @@ export function CartSidebar() {
     setOrderData({
       subtotal: subtotal,
       itemsCount: totalQuantity,
-      customerName: ''  // Será preenchido depois no handleCustomerSubmit
+      customerName: '',  // Será preenchido depois no handleCustomerSubmit
+      finalWhatsapp: ''  // Será preenchido depois no handleCustomerSubmit
     })
     
     // Abrir modal de nome ao invés da tela de sucesso
