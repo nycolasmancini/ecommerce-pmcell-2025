@@ -310,19 +310,26 @@ const ProductDetailsModal = memo(({ isOpen, onClose, product }: ProductDetailsMo
                     </>
                   )}
 
-                  {/* Indicadores */}
+                  {/* Indicadores de Imagem */}
                   {sortedImages.length > 1 && (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2.5 px-3 py-2 rounded-full bg-black/20 backdrop-blur-sm">
                       {sortedImages.map((_, index) => (
                         <button
                           key={index}
                           onClick={() => goToImage(index)}
-                          className={`w-2.5 h-2.5 rounded-full transition-all duration-200 ${
+                          className={`image-indicator transition-all duration-300 rounded-full ${
                             index === currentImageIndex 
-                              ? 'bg-white scale-125' 
-                              : 'bg-white/60 hover:bg-white/80'
+                              ? 'image-indicator-active' 
+                              : 'image-indicator-inactive hover:scale-110'
                           }`}
-                          aria-label={`Ir para imagem ${index + 1}`}
+                          style={{
+                            backgroundColor: index === currentImageIndex ? 'var(--orange)' : 'rgba(249, 115, 22, 0.4)',
+                            boxShadow: index === currentImageIndex ? '0 0 20px rgba(249, 115, 22, 0.3)' : undefined,
+                            width: index === currentImageIndex ? '32px' : '10px',
+                            height: index === currentImageIndex ? '10px' : '10px'
+                          }}
+                          aria-label={`Ir para imagem ${index + 1} de ${sortedImages.length}`}
+                          aria-current={index === currentImageIndex ? 'true' : 'false'}
                         />
                       ))}
                     </div>
