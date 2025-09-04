@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { query as dbQuery, testConnection } from '@/lib/db'
+import { query as dbQuery, testConnection, deleteProduct } from '@/lib/db'
 
 export async function GET(
   request: Request,
@@ -464,47 +464,102 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
+  
+  // Validar ID do produto
+  if (!id || id.trim() === '') {
+    return NextResponse.json({ error: 'ID do produto inválido' }, { status: 400 })
+  }
+
   try {
-    // Verificar se o produto existe
-    const existingProduct = await prisma.product.findUnique({
-      where: { id }
-    })
+    // Verificar se está em produção ou desenvolvimento
+    if (process.env.NODE_ENV === 'production') {
+      console.log('🗑️ Excluindo produto via SQL direto (produção):', id)
+      
+      // Testar conexão primeiro
+      const isConnected = await testConnection()
+      if (!isConnected) {
+        return NextResponse.json({ error: 'Database connection failed' }, { status: 500 })
+      }
 
-    if (!existingProduct) {
-      return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 })
-    }
+      // Verificar se produto existe
+      const productCheck = await dbQuery(
+        'SELECT "id" FROM "Product" WHERE "id" = $1',
+        [id]
+      )
+      
+      if (!productCheck || !productCheck.rows || productCheck.rows.length === 0) {
+        return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 })
+      }
 
-    // Usar transação para excluir produto e todos os registros relacionados
-    await prisma.$transaction(async (tx) => {
-      // 1. Excluir relações produto-fornecedor
-      await tx.productSupplier.deleteMany({
-        where: { productId: id }
-      })
+      // Usar função SQL direto para exclusão
+      const deleteResult = await deleteProduct(id)
+      
+      if (!deleteResult.success) {
+        return NextResponse.json({ error: 'Falha ao excluir produto' }, { status: 500 })
+      }
 
-      // 2. Excluir relações produto-modelo (para capas/películas)
-      await tx.productModel.deleteMany({
-        where: { productId: id }
-      })
-
-      // 3. Excluir itens de pedidos relacionados
-      await tx.orderItem.deleteMany({
-        where: { productId: id }
-      })
-
-      // 4. Excluir produtos de kits
-      await tx.kitProduct.deleteMany({
-        where: { productId: id }
-      })
-
-      // 5. Excluir produto (imagens serão excluídas automaticamente pelo cascade)
-      await tx.product.delete({
+      console.log('✅ Produto excluído com sucesso (produção):', deleteResult)
+      return NextResponse.json({ message: 'Produto excluído com sucesso' })
+      
+    } else {
+      console.log('🗑️ Excluindo produto via Prisma (desenvolvimento):', id)
+      
+      // Verificar se o produto existe
+      const existingProduct = await prisma.product.findUnique({
         where: { id }
       })
-    })
 
-    return NextResponse.json({ message: 'Produto excluído com sucesso' })
+      if (!existingProduct) {
+        return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 })
+      }
+
+      // Usar transação para excluir produto e todos os registros relacionados
+      await prisma.$transaction(async (tx) => {
+        // 1. Excluir relações produto-fornecedor
+        const deletedSuppliers = await tx.productSupplier.deleteMany({
+          where: { productId: id }
+        })
+        console.log(`Deleted ${deletedSuppliers.count} product-supplier relations`)
+
+        // 2. Excluir relações produto-modelo (para capas/películas)
+        const deletedModels = await tx.productModel.deleteMany({
+          where: { productId: id }
+        })
+        console.log(`Deleted ${deletedModels.count} product-model relations`)
+
+        // 3. Excluir itens de pedidos relacionados
+        const deletedOrderItems = await tx.orderItem.deleteMany({
+          where: { productId: id }
+        })
+        console.log(`Deleted ${deletedOrderItems.count} order items`)
+
+        // 4. Excluir produtos de kits
+        const deletedKitProducts = await tx.kitProduct.deleteMany({
+          where: { productId: id }
+        })
+        console.log(`Deleted ${deletedKitProducts.count} kit products`)
+
+        // 5. Excluir produto (imagens serão excluídas automaticamente pelo cascade)
+        const deletedProduct = await tx.product.delete({
+          where: { id }
+        })
+        console.log('✅ Produto excluído com sucesso (desenvolvimento):', deletedProduct.name)
+      })
+
+      return NextResponse.json({ message: 'Produto excluído com sucesso' })
+    }
   } catch (error) {
-    console.error('Erro ao excluir produto:', error)
+    console.error('❌ Erro ao excluir produto:', error)
+    
+    // Log mais detalhado do erro
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      })
+    }
+    
     return NextResponse.json(
       { error: 'Erro ao excluir produto: ' + (error instanceof Error ? error.message : 'Erro desconhecido') },
       { status: 500 }

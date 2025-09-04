@@ -325,3 +325,98 @@ export async function updateProduct(productId: string, data: {
   }
   return result.rows[0]
 }
+
+// Função para excluir produto e todas suas relações via SQL direto
+export async function deleteProductRelations(productId: string) {
+  const deleteQueries = [
+    // 1. Excluir relações produto-fornecedor
+    {
+      query: 'DELETE FROM "ProductSupplier" WHERE "productId" = $1',
+      name: 'ProductSupplier'
+    },
+    // 2. Excluir relações produto-modelo (para capas/películas)
+    {
+      query: 'DELETE FROM "ProductModel" WHERE "productId" = $1',
+      name: 'ProductModel'
+    },
+    // 3. Excluir itens de pedidos relacionados
+    {
+      query: 'DELETE FROM "OrderItem" WHERE "productId" = $1',
+      name: 'OrderItem'
+    },
+    // 4. Excluir produtos de kits
+    {
+      query: 'DELETE FROM "KitProduct" WHERE "productId" = $1',
+      name: 'KitProduct'
+    },
+    // 5. Excluir imagens do produto
+    {
+      query: 'DELETE FROM "ProductImage" WHERE "productId" = $1',
+      name: 'ProductImage'
+    }
+  ]
+  
+  const results = {}
+  
+  // Executar todas as exclusões das relações
+  for (const deleteOp of deleteQueries) {
+    try {
+      const result = await query(deleteOp.query, [productId])
+      results[deleteOp.name] = result?.rowCount || 0
+      console.log(`Deleted ${results[deleteOp.name]} records from ${deleteOp.name}`)
+    } catch (error) {
+      console.error(`Error deleting from ${deleteOp.name}:`, error)
+      throw new Error(`Failed to delete ${deleteOp.name} relations`)
+    }
+  }
+  
+  return results
+}
+
+// Função para excluir produto via SQL direto
+export async function deleteProduct(productId: string) {
+  if (!productId || productId.trim() === '') {
+    throw new Error('Invalid product ID')
+  }
+
+  try {
+    // Primeiro, verificar se o produto existe
+    const checkResult = await query(
+      'SELECT "id" FROM "Product" WHERE "id" = $1', 
+      [productId]
+    )
+    
+    if (!checkResult || !checkResult.rows || checkResult.rows.length === 0) {
+      throw new Error('Product not found')
+    }
+
+    // Excluir todas as relações primeiro
+    const deletedRelations = await deleteProductRelations(productId)
+    
+    // Por último, excluir o produto
+    const deleteResult = await query(
+      'DELETE FROM "Product" WHERE "id" = $1 RETURNING "id", "name"',
+      [productId]
+    )
+    
+    if (!deleteResult || !deleteResult.rows || deleteResult.rows.length === 0) {
+      throw new Error('Failed to delete product')
+    }
+    
+    const deletedProduct = deleteResult.rows[0]
+    console.log('Product deleted successfully:', {
+      id: deletedProduct.id,
+      name: deletedProduct.name,
+      relationsDeleted: deletedRelations
+    })
+    
+    return {
+      success: true,
+      product: deletedProduct,
+      relationsDeleted: deletedRelations
+    }
+  } catch (error) {
+    console.error('Error in deleteProduct:', error)
+    throw error
+  }
+}

@@ -74,6 +74,7 @@ export default function AdminProdutos() {
   const [categories, setCategories] = useState<Category[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [showModalForm, setShowModalForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -394,22 +395,56 @@ export default function AdminProdutos() {
     }
   }
 
-  const deleteProduct = async (productId: string) => {
-    if (confirm('Tem certeza que deseja excluir este produto?')) {
-      try {
-        const response = await fetch(`/api/products/${productId}`, {
-          method: 'DELETE',
-        })
-
-        if (response.ok) {
-          alert('Produto excluído com sucesso!')
-          loadProducts()
-        } else {
-          alert('Erro ao excluir produto')
+  const deleteProduct = async (productId: string, productName: string) => {
+    // Confirmação dupla para evitar exclusões acidentais
+    if (confirm(`Tem certeza que deseja excluir o produto "${productName}"?\n\nEsta ação não pode ser desfeita.`)) {
+      if (confirm(`⚠️ CONFIRMAÇÃO FINAL ⚠️\n\nVocê está prestes a excluir permanentemente:\n"${productName}"\n\nDigite "EXCLUIR" para confirmar ou cancelar.`)) {
+        const confirmation = prompt('Digite "EXCLUIR" (sem as aspas) para confirmar a exclusão:')
+        if (confirmation !== 'EXCLUIR') {
+          alert('Exclusão cancelada.')
+          return
         }
-      } catch (error) {
-        console.error('Erro ao excluir produto:', error)
+      } else {
+        return
       }
+    } else {
+      return
+    }
+
+    // Set loading state
+    setDeleting(productId)
+
+    try {
+      console.log('🗑️ Iniciando exclusão do produto:', productId)
+      
+      const response = await fetch(`/api/products/${productId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+
+      console.log('📡 Response da API:', response.status, response.statusText)
+      
+      const result = await response.json()
+      console.log('📋 Resultado da exclusão:', result)
+
+      if (response.ok) {
+        console.log('✅ Produto excluído com sucesso!')
+        alert(`✅ Produto "${productName}" excluído com sucesso!`)
+        // Recarregar lista de produtos
+        await loadProducts()
+      } else {
+        console.error('❌ Erro na resposta da API:', result)
+        const errorMessage = result.error || `Erro ao excluir produto (Status: ${response.status})`
+        alert(`❌ ${errorMessage}`)
+      }
+    } catch (error) {
+      console.error('❌ Erro durante a exclusão:', error)
+      alert(`❌ Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+    } finally {
+      // Clear loading state
+      setDeleting(null)
     }
   }
 
@@ -821,10 +856,16 @@ export default function AdminProdutos() {
                           {product.isActive ? 'Desativar' : 'Ativar'}
                         </button>
                         <button
-                          onClick={() => deleteProduct(product.id)}
-                          className="text-red-600 hover:text-red-900"
+                          onClick={() => deleteProduct(product.id, product.name)}
+                          disabled={deleting === product.id}
+                          className={`font-medium transition-colors duration-200 ${
+                            deleting === product.id 
+                              ? 'text-gray-400 cursor-not-allowed' 
+                              : 'text-red-600 hover:text-red-900'
+                          }`}
+                          title={`Excluir produto: ${product.name}`}
                         >
-                          Excluir
+                          {deleting === product.id ? '⏳ Excluindo...' : 'Excluir'}
                         </button>
                       </td>
                     </tr>
