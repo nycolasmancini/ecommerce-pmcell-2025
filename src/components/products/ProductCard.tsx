@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import Image from 'next/image'
+import { ShoppingCart } from 'lucide-react'
 import { useCartStore } from '@/stores/useCartStore'
 import { useSession } from '@/contexts/SessionContext'
 import { formatPrice } from '@/lib/utils'
@@ -213,6 +214,22 @@ export default function ProductCard({ product, onSelectModels, onUnlockPrices }:
               <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
             </svg>
             {product.boxQuantity}x
+          </div>
+        )}
+        
+        {/* Badge de quantidade no carrinho */}
+        {cartQuantity > 0 && (
+          <div 
+            data-testid="cart-quantity-badge"
+            className="absolute bottom-2 right-2 bg-green-500 text-white text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 shadow-lg transition-all duration-300 ease-in-out animate-fade-in"
+            style={{ background: 'var(--green)' }}
+          >
+            <ShoppingCart 
+              data-testid="cart-badge-icon"
+              className="w-3 h-3" 
+              strokeWidth={2}
+            />
+            <span className="font-bold">{cartQuantity}</span>
           </div>
         )}
         
