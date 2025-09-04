@@ -138,7 +138,7 @@ export default function UnlockPricesModal({ isOpen, onClose }: UnlockPricesModal
               id="whatsapp"
               value={whatsapp}
               onChange={handlePhoneChange}
-              placeholder="(11) 9999-9999 ou (11) 99999-9999"
+              placeholder="(__) _____-____"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               required
             />
