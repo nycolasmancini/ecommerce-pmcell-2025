@@ -4,16 +4,17 @@ import { supabase } from '@/lib/supabase'
 import { query as dbQuery, testConnection, createProduct, createProductImage } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams
+  const admin = searchParams.get('admin')
+  
+  // Extract search parameters outside of conditional blocks for catch scope access
+  const categoryId = searchParams.get('categoryId')
+  const featured = searchParams.get('featured')
+  const search = searchParams.get('search')
+  const page = parseInt(searchParams.get('page') || '1')
+  const limit = parseInt(searchParams.get('limit') || '12')
+  
   try {
-    const searchParams = request.nextUrl.searchParams
-    const admin = searchParams.get('admin')
-    
-    // Extract search parameters outside of conditional blocks for catch scope access
-    const categoryId = searchParams.get('categoryId')
-    const featured = searchParams.get('featured')
-    const search = searchParams.get('search')
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '12')
     
     console.log('🔍 Products API called:', {
       NODE_ENV: process.env.NODE_ENV,
