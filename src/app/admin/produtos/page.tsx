@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import EditProductModelsModal from '@/components/admin/EditProductModelsModal'
 import { ModalProductForm } from '@/components/admin/ModalProductForm'
 import ImageManager from '@/components/admin/ImageManager'
+import ImageUploader from '@/components/admin/ImageUploader'
 
 interface Product {
   id: string
@@ -703,21 +704,15 @@ export default function AdminProdutos() {
                 )}
                 
                 {/* Upload de novas imagens */}
-                <input
-                  type="file"
-                  multiple
+                <ImageUploader
+                  selectedImages={selectedImages}
+                  onChange={setSelectedImages}
+                  maxFiles={10}
                   accept="image/*"
-                  onChange={handleImageSelect}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
                 />
-                {selectedImages.length > 0 && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    {selectedImages.length} arquivo(s) selecionado(s) para adicionar
-                  </p>
-                )}
                 
                 {editingProduct && (
-                  <p className="text-sm text-blue-600 mt-1">
+                  <p className="text-sm text-blue-600 mt-2">
                     💡 Use o gerenciador acima para editar imagens existentes ou adicione novas imagens abaixo
                   </p>
                 )}
