@@ -5,12 +5,12 @@ import Image from 'next/image'
 
 interface ProductImage {
   id: string
-  productId: string
+  productId?: string
   url: string
-  fileName: string
-  order: number
+  fileName?: string
+  order?: number
   isMain: boolean
-  createdAt: string
+  createdAt?: string
 }
 
 interface ImageManagerProps {
@@ -102,7 +102,7 @@ export default function ImageManager({ productId, images, onUpdate }: ImageManag
             <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
               <Image
                 src={image.url}
-                alt={image.fileName || `Imagem ${image.order + 1}`}
+                alt={image.fileName || `Imagem ${images.indexOf(image) + 1}`}
                 fill
                 sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 className="object-cover transition-transform group-hover:scale-105"
@@ -131,7 +131,7 @@ export default function ImageManager({ productId, images, onUpdate }: ImageManag
                       }
                       disabled:opacity-50 disabled:cursor-not-allowed
                     `}
-                    aria-label={`Favoritar imagem ${image.fileName}`}
+                    aria-label={`Favoritar imagem ${image.fileName || `${images.indexOf(image) + 1}`}`}
                     title={image.isMain ? 'Imagem principal' : 'Definir como principal'}
                   >
                     {loading === `favorite-${image.id}` ? (
@@ -145,10 +145,10 @@ export default function ImageManager({ productId, images, onUpdate }: ImageManag
 
                   {/* Botão Deletar */}
                   <button
-                    onClick={() => handleDelete(image.id, image.fileName || '')}
+                    onClick={() => handleDelete(image.id, image.fileName || `Imagem ${images.indexOf(image) + 1}`)}
                     disabled={loading === `delete-${image.id}`}
                     className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    aria-label={`Deletar imagem ${image.fileName}`}
+                    aria-label={`Deletar imagem ${image.fileName || `${images.indexOf(image) + 1}`}`}
                     title="Deletar imagem"
                   >
                     {loading === `delete-${image.id}` ? (
@@ -165,7 +165,7 @@ export default function ImageManager({ productId, images, onUpdate }: ImageManag
 
             {/* Nome do arquivo */}
             <div className="mt-2 text-sm text-gray-600 text-center truncate px-1">
-              {image.fileName || `Imagem ${image.order + 1}`}
+              {image.fileName || `Imagem ${images.indexOf(image) + 1}`}
             </div>
 
             {/* Loading states independentes */}
