@@ -386,6 +386,43 @@ export async function GET(request: NextRequest) {
       env: process.env.NODE_ENV
     })
     
+    // Fallback para dados mockados em desenvolvimento quando o Prisma falhar
+    if (process.env.NODE_ENV === 'development' && errorMessage.includes('DATABASE_URL')) {
+      console.log('🔄 Usando dados mockados como fallback...')
+      
+      const { mockProducts } = await import('@/lib/mock-data')
+      
+      // Aplicar filtros básicos aos dados mock
+      let filteredProducts = [...mockProducts]
+      
+      if (category) {
+        filteredProducts = filteredProducts.filter(p => p.categoryId === category)
+      }
+      
+      if (search) {
+        const searchTerm = search.toLowerCase()
+        filteredProducts = filteredProducts.filter(p => 
+          p.name.toLowerCase().includes(searchTerm) ||
+          p.description.toLowerCase().includes(searchTerm) ||
+          p.brand?.toLowerCase().includes(searchTerm)
+        )
+      }
+      
+      const total = filteredProducts.length
+      const startIndex = (page - 1) * limit
+      const paginatedProducts = filteredProducts.slice(startIndex, startIndex + limit)
+      
+      return NextResponse.json({
+        products: paginatedProducts,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      })
+    }
+    
     return NextResponse.json({ 
       error: 'Failed to fetch products',
       details: process.env.NODE_ENV !== 'production' ? errorMessage : undefined
