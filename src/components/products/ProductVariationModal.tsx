@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
 import { useCartStore } from '@/stores/useCartStore'
 import { formatPrice } from '@/lib/utils'
 import { StableQuantityInput } from './StableQuantityInput'
-import SimpleQuantityInput from './SimpleQuantityInput'
 
 interface ProductModel {
   id: string
@@ -166,20 +165,6 @@ const ModelItem = memo(({
               </div>
             )}
             
-            {/* Input de quantidade manual para teste */}
-            <div className="mt-2">
-              <div className={`text-xs mb-1 font-medium transition-colors duration-200 ${
-                currentQuantity > 0 ? 'text-green-600' : 'text-gray-500'
-              }`}>
-                Quantidade no carrinho: {currentQuantity > 0 ? `${currentQuantity} un.` : 'vazio'}
-              </div>
-              <SimpleQuantityInput
-                value={currentQuantity}
-                onChange={(value) => onQuantityChange(model.id, value)}
-                placeholder="0"
-                className="w-20"
-              />
-            </div>
           </div>
         </div>
         
