@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import EditProductModelsModal from '@/components/admin/EditProductModelsModal'
 import { ModalProductForm } from '@/components/admin/ModalProductForm'
+import ImageManager from '@/components/admin/ImageManager'
 
 interface Product {
   id: string
@@ -676,6 +677,29 @@ export default function AdminProdutos() {
                 <label className="block text-sm font-medium text-gray-700">
                   Imagens do Produto
                 </label>
+                
+                {/* Gerenciar imagens existentes (apenas quando editando) */}
+                {editingProduct && editingProduct.images && editingProduct.images.length > 0 && (
+                  <div className="mt-3 mb-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <ImageManager
+                      productId={editingProduct.id}
+                      images={editingProduct.images}
+                      onUpdate={() => {
+                        // Recarregar dados do produto para atualizar as imagens
+                        loadProducts()
+                        // Recarregar produto específico para o formulário
+                        if (editingProduct) {
+                          fetch(`/api/products/${editingProduct.id}`)
+                            .then(res => res.json())
+                            .then(product => setEditingProduct(product))
+                            .catch(err => console.error('Erro ao recarregar produto:', err))
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+                
+                {/* Upload de novas imagens */}
                 <input
                   type="file"
                   multiple
@@ -685,7 +709,13 @@ export default function AdminProdutos() {
                 />
                 {selectedImages.length > 0 && (
                   <p className="text-sm text-gray-600 mt-1">
-                    {selectedImages.length} arquivo(s) selecionado(s)
+                    {selectedImages.length} arquivo(s) selecionado(s) para adicionar
+                  </p>
+                )}
+                
+                {editingProduct && (
+                  <p className="text-sm text-blue-600 mt-1">
+                    💡 Use o gerenciador acima para editar imagens existentes ou adicione novas imagens abaixo
                   </p>
                 )}
               </div>
