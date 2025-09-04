@@ -178,19 +178,18 @@ export function CartSidebar() {
       const createdOrder = await createResponse.json()
       setCreatedOrderId(createdOrder.id)
       
-      // Segundo: atualizar o pedido com o WhatsApp final (se diferente do original)
-      if (data.finalWhatsapp !== data.originalWhatsapp) {
-        const updateResponse = await fetch(`/api/orders/${createdOrder.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            finalWhatsapp: data.finalWhatsapp
-          })
+      // Segundo: atualizar o pedido com nome do cliente e WhatsApp final
+      const updateResponse = await fetch(`/api/orders/${createdOrder.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: data.customerName,
+          finalWhatsapp: data.finalWhatsapp
         })
+      })
 
-        if (!updateResponse.ok) {
-          console.warn('Falha ao atualizar WhatsApp final, mas pedido foi criado com sucesso')
-        }
+      if (!updateResponse.ok) {
+        console.warn('Falha ao atualizar dados do cliente, mas pedido foi criado com sucesso')
       }
 
       // Gerar próximo número de pedido

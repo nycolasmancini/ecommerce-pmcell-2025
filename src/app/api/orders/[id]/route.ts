@@ -10,6 +10,11 @@ export async function PATCH(
     const { id } = resolvedParams
     const body = await request.json()
     
+    console.log('🔄 PATCH /api/orders/[id] - Iniciando atualização:', { 
+      orderId: id, 
+      requestBody: body 
+    })
+    
     // Verificar se o pedido existe usando query segura (evita erro de campos inexistentes)
     let existingOrder
     try {
@@ -41,19 +46,38 @@ export async function PATCH(
 
     // Atualizar nome do cliente se fornecido
     if (body.customerName) {
-      await prisma.customer.update({
-        where: { id: existingOrder.customerId },
-        data: { name: body.customerName.trim() }
+      console.log('👤 Atualizando nome do cliente:', { 
+        customerId: existingOrder.customerId, 
+        newName: body.customerName.trim() 
       })
+      try {
+        await prisma.customer.update({
+          where: { id: existingOrder.customerId },
+          data: { name: body.customerName.trim() }
+        })
+        console.log('✅ Nome do cliente atualizado com sucesso')
+      } catch (error: any) {
+        console.error('❌ Erro ao atualizar nome do cliente:', { 
+          customerId: existingOrder.customerId, 
+          error: error.message 
+        })
+        throw error
+      }
     }
 
     // Atualizar finalWhatsapp se fornecido
     if (body.finalWhatsapp) {
+      console.log('📱 Processando finalWhatsapp:', { finalWhatsapp: body.finalWhatsapp })
+      
       // Validar WhatsApp brasileiro
       const whatsappRegex = /^55\d{10,11}$/
       const cleanWhatsapp = body.finalWhatsapp.replace(/\D/g, '')
       
       if (!whatsappRegex.test(cleanWhatsapp)) {
+        console.error('❌ WhatsApp final inválido:', { 
+          originalValue: body.finalWhatsapp, 
+          cleanValue: cleanWhatsapp 
+        })
         return NextResponse.json(
           { error: 'WhatsApp final inválido. Use o formato brasileiro com DDD.' },
           { status: 400 }
@@ -61,6 +85,7 @@ export async function PATCH(
       }
       
       updateData.finalWhatsapp = body.finalWhatsapp
+      console.log('✅ finalWhatsapp validado e adicionado aos dados de atualização')
     }
 
     // Atualizar status se fornecido
@@ -93,6 +118,8 @@ export async function PATCH(
     }
 
     // Realizar a atualização
+    console.log('📝 Dados para atualização:', { id, updateData })
+    
     let updatedOrder
     try {
       updatedOrder = await prisma.order.update({
@@ -107,23 +134,41 @@ export async function PATCH(
           }
         }
       })
+      console.log('✅ Pedido atualizado com sucesso:', { orderId: id })
     } catch (error: any) {
+      console.error('❌ Erro ao atualizar pedido:', { 
+        orderId: id, 
+        error: error.message, 
+        code: error.code,
+        updateData 
+      })
+      
       // Se erro relacionado a campos WhatsApp, tentar sem eles
-      if (error.message && error.message.includes('finalWhatsapp')) {
-        console.log('🔄 finalWhatsapp field not found, updating without it')
-        const { finalWhatsapp, ...updateDataWithoutWhatsapp } = updateData
-        updatedOrder = await prisma.order.update({
-          where: { id },
-          data: updateDataWithoutWhatsapp,
-          include: {
-            customer: true,
-            items: {
-              include: {
-                product: true
+      if (error.message && (error.message.includes('finalWhatsapp') || error.message.includes('originalWhatsapp'))) {
+        console.log('🔄 Campos WhatsApp não encontrados, tentando sem eles')
+        const { finalWhatsapp, originalWhatsapp, ...updateDataWithoutWhatsapp } = updateData
+        try {
+          updatedOrder = await prisma.order.update({
+            where: { id },
+            data: updateDataWithoutWhatsapp,
+            include: {
+              customer: true,
+              items: {
+                include: {
+                  product: true
+                }
               }
             }
-          }
-        })
+          })
+          console.log('✅ Pedido atualizado com fallback (sem campos WhatsApp):', { orderId: id })
+        } catch (fallbackError: any) {
+          console.error('❌ Erro mesmo com fallback:', { 
+            orderId: id, 
+            error: fallbackError.message, 
+            code: fallbackError.code 
+          })
+          throw fallbackError
+        }
       } else {
         throw error
       }
