@@ -35,6 +35,8 @@ interface Order {
   notes?: string
   internalNotes?: string
   assignedSeller?: string
+  originalWhatsapp?: string  // WhatsApp usado para desbloquear o site
+  finalWhatsapp?: string     // WhatsApp alterado pelo cliente
   createdAt: string
   updatedAt: string
   confirmedAt?: string
@@ -148,6 +150,46 @@ export default function AdminPedidos() {
   const formatWhatsApp = (whatsapp: string) => {
     const clean = whatsapp.replace(/\D/g, '')
     return clean.replace(/(\d{2})(\d{2})(\d{4,5})(\d{4})/, '+$1 ($2) $3-$4')
+  }
+
+  const formatWhatsAppInfo = (order: Order) => {
+    const customerWhatsApp = order.customer.whatsapp
+    const originalWhatsApp = order.originalWhatsapp
+    const finalWhatsApp = order.finalWhatsapp
+    
+    // Se não há WhatsApp original ou final, usar apenas o do cliente
+    if (!originalWhatsApp && !finalWhatsApp) {
+      return {
+        display: formatWhatsApp(customerWhatsApp),
+        hasChanges: false,
+        details: null
+      }
+    }
+    
+    // Verificar se houve alteração
+    const hasChanges = originalWhatsApp && finalWhatsApp && originalWhatsApp !== finalWhatsApp
+    
+    if (hasChanges) {
+      return {
+        display: `📱 ${formatWhatsApp(originalWhatsApp!)} → ${formatWhatsApp(finalWhatsApp!)}`,
+        hasChanges: true,
+        details: {
+          original: formatWhatsApp(originalWhatsApp!),
+          final: formatWhatsApp(finalWhatsApp!)
+        }
+      }
+    }
+    
+    // Usar o WhatsApp mais relevante disponível
+    const displayWhatsApp = finalWhatsApp || originalWhatsApp || customerWhatsApp
+    return {
+      display: formatWhatsApp(displayWhatsApp),
+      hasChanges: false,
+      details: originalWhatsApp ? {
+        original: formatWhatsApp(originalWhatsApp),
+        final: finalWhatsApp ? formatWhatsApp(finalWhatsApp) : null
+      } : null
+    }
   }
 
   const filteredOrders = orders.filter(order => {
@@ -282,7 +324,14 @@ export default function AdminPedidos() {
                             Pedido #{order.orderNumber}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {order.customer.name} • {formatWhatsApp(order.customer.whatsapp)}
+                            {order.customer.name} • {(() => {
+                              const whatsappInfo = formatWhatsAppInfo(order)
+                              return (
+                                <span className={whatsappInfo.hasChanges ? 'text-blue-600 font-medium' : ''}>
+                                  {whatsappInfo.display}
+                                </span>
+                              )
+                            })()}
                             {order.customer.company && <span> • {order.customer.company}</span>}
                           </div>
                           <div className="text-sm text-gray-500">
@@ -339,7 +388,37 @@ export default function AdminPedidos() {
                 <h4 className="font-medium text-gray-900 mb-3">Dados do Cliente</h4>
                 <div className="space-y-2 text-sm">
                   <p><strong>Nome:</strong> {selectedOrder.customer.name}</p>
-                  <p><strong>WhatsApp:</strong> {formatWhatsApp(selectedOrder.customer.whatsapp)}</p>
+                  
+                  {/* Seção de WhatsApp detalhada */}
+                  <div className="border-l-4 border-blue-500 pl-3 py-1 bg-blue-50 rounded">
+                    <div className="font-medium text-blue-900 mb-1">📱 Informações de WhatsApp</div>
+                    
+                    {selectedOrder.originalWhatsapp && (
+                      <p className="text-xs text-gray-600">
+                        <strong>Original (usado para desbloquear):</strong> {formatWhatsApp(selectedOrder.originalWhatsapp)}
+                      </p>
+                    )}
+                    
+                    {selectedOrder.finalWhatsapp && (
+                      <p className="text-xs text-gray-600">
+                        <strong>Alterado pelo cliente:</strong> {formatWhatsApp(selectedOrder.finalWhatsapp)}
+                        {selectedOrder.originalWhatsapp && selectedOrder.finalWhatsapp !== selectedOrder.originalWhatsapp && (
+                          <span className="ml-1 text-orange-600 font-medium">📝 ALTERADO</span>
+                        )}
+                      </p>
+                    )}
+                    
+                    <p className="text-xs text-gray-600">
+                      <strong>WhatsApp do cadastro:</strong> {formatWhatsApp(selectedOrder.customer.whatsapp)}
+                    </p>
+                    
+                    {!selectedOrder.originalWhatsapp && !selectedOrder.finalWhatsapp && (
+                      <p className="text-xs text-orange-600">
+                        <strong>⚠️ Pedido anterior:</strong> Apenas WhatsApp do cadastro disponível
+                      </p>
+                    )}
+                  </div>
+                  
                   {selectedOrder.customer.email && (
                     <p><strong>Email:</strong> {selectedOrder.customer.email}</p>
                   )}

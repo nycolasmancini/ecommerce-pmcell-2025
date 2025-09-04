@@ -193,14 +193,14 @@ export function CartSidebar() {
       }
 
       // Gerar próximo número de pedido
-      setCurrentOrderNumber(prev => prev + 1)
+      setCurrentOrderNumber(prev => prev + 1);
       
       // Atualizar dados do pedido com o nome do cliente e WhatsApp final
       setOrderData(prev => ({
         ...prev,
         customerName: data.customerName,
         finalWhatsapp: data.finalWhatsapp
-      }))
+      }));
       
       // Fechar modal de nome e mostrar tela de sucesso
       setShowCustomerNameModal(false)
