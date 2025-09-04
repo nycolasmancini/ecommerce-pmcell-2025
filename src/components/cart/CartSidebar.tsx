@@ -7,24 +7,30 @@ import Image from 'next/image'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { EconomizerModal } from './EconomizerModal'
 import { OrderCompletionSidebar } from './OrderCompletionSidebar'
+import CustomerNameModal from './CustomerNameModal'
 import Toast from '@/components/ui/Toast'
 import { useToast } from '@/hooks/useToast'
+import { useSession } from '@/contexts/SessionContext'
 
 export function CartSidebar() {
   const [mounted, setMounted] = useState(false)
   const [showEconomizerModal, setShowEconomizerModal] = useState(false)
   const [showOrderCompletion, setShowOrderCompletion] = useState(false)
+  const [showCustomerNameModal, setShowCustomerNameModal] = useState(false)
   const [currentOrderNumber, setCurrentOrderNumber] = useState(28793)
   const [orderData, setOrderData] = useState({
     subtotal: 0,
-    itemsCount: 0
+    itemsCount: 0,
+    customerName: ''
   })
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
   const [previousUpgradesLength, setPreviousUpgradesLength] = useState(-1) // Start with -1 to detect initial state
   const [buttonState, setButtonState] = useState<'hidden' | 'entering' | 'visible' | 'exiting'>('hidden')
   const [removingItems, setRemovingItems] = useState<Set<string>>(new Set())
   const [editingQuantity, setEditingQuantity] = useState<string | null>(null)
   const [tempQuantityValues, setTempQuantityValues] = useState<Record<string, string>>({})
   const { toasts, showToast, removeToast } = useToast()
+  const { whatsapp } = useSession()
   const minimumOrderRef = useRef<HTMLParagraphElement>(null)
   const scrollPositionRef = useRef<number>(0)
   const { 
@@ -111,15 +117,14 @@ export function CartSidebar() {
       return
     }
     
-    // Capturar dados do pedido antes de mostrar tela de finalização
+    // Capturar dados do pedido
     setOrderData({
       subtotal: subtotal,
       itemsCount: totalQuantity
     })
     
-    // Gerar próximo número de pedido e mostrar tela de finalização
-    setCurrentOrderNumber(prev => prev + 1)
-    setShowOrderCompletion(true)
+    // Abrir modal de nome ao invés da tela de sucesso
+    setShowCustomerNameModal(true)
   }
 
   // Função para voltar do completion para o carrinho
@@ -131,6 +136,81 @@ export function CartSidebar() {
   const handleCloseCompletion = () => {
     setShowOrderCompletion(false)
     toggleCart() // Fecha o carrinho principal
+  }
+
+  // Função para processar dados do cliente e criar pedido
+  const handleCustomerSubmit = async (data: {
+    customerName: string
+    originalWhatsapp: string
+    finalWhatsapp: string
+  }) => {
+    try {
+      // Primeiro: criar o pedido com os dados básicos
+      const orderPayload = {
+        customer: {
+          name: 'Cliente Temporário', // Nome temporário
+          whatsapp: data.originalWhatsapp,
+          email: '' // Email vazio por enquanto
+        },
+        items: items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          modelId: item.modelId || undefined,
+          modelName: item.modelName || undefined
+        })),
+        notes: '',
+        originalWhatsapp: data.originalWhatsapp
+      }
+
+      const createResponse = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload)
+      })
+
+      if (!createResponse.ok) {
+        throw new Error('Falha ao criar pedido')
+      }
+
+      const createdOrder = await createResponse.json()
+      setCreatedOrderId(createdOrder.id)
+      
+      // Segundo: atualizar o pedido com o nome do cliente
+      const updateResponse = await fetch(`/api/orders/${createdOrder.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: data.customerName,
+          finalWhatsapp: data.finalWhatsapp
+        })
+      })
+
+      if (!updateResponse.ok) {
+        throw new Error('Falha ao atualizar dados do cliente')
+      }
+
+      // Gerar próximo número de pedido
+      setCurrentOrderNumber(prev => prev + 1)
+      
+      // Atualizar dados do pedido com o nome do cliente
+      setOrderData(prev => ({
+        ...prev,
+        customerName: data.customerName
+      }))
+      
+      // Fechar modal de nome e mostrar tela de sucesso
+      setShowCustomerNameModal(false)
+      setShowOrderCompletion(true)
+      
+      showToast('Pedido criado com sucesso!', 'success')
+      
+    } catch (error) {
+      console.error('Erro ao processar pedido:', error)
+      showToast(
+        'Erro ao processar pedido. Tente novamente.',
+        'error'
+      )
+    }
   }
 
   // Simple calculation without complex memoization
@@ -712,6 +792,15 @@ export function CartSidebar() {
         eligibleItems={eligibleUpgrades}
       />
 
+      {/* Customer Name Modal */}
+      <CustomerNameModal
+        isOpen={showCustomerNameModal}
+        onClose={() => setShowCustomerNameModal(false)}
+        onSubmit={handleCustomerSubmit}
+        totalValue={orderData.subtotal}
+        itemsCount={orderData.itemsCount}
+      />
+
       {/* Order Completion Sidebar */}
       <OrderCompletionSidebar
         isOpen={showOrderCompletion}
@@ -720,6 +809,7 @@ export function CartSidebar() {
         orderNumber={currentOrderNumber}
         subtotal={orderData.subtotal}
         itemsCount={orderData.itemsCount}
+        customerName={orderData.customerName}
       />
       
       {/* Toast notifications */}

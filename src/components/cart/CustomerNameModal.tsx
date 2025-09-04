@@ -134,6 +134,7 @@ export default function CustomerNameModal({
       <div 
         className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
         onClick={onClose}
+        data-testid="modal-overlay"
       />
       
       {/* Modal */}
@@ -149,6 +150,7 @@ export default function CustomerNameModal({
               <button
                 onClick={onClose}
                 className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-white/60 hover:text-gray-700"
+                aria-label="Fechar modal"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -173,7 +175,7 @@ export default function CustomerNameModal({
                 maxLength={100}
               />
               <p className="text-xs text-gray-500">
-                Usaremos seu nome para um atendimento mais pessoal no WhatsApp
+                Usaremos para um atendimento personalizado
               </p>
             </div>
 
@@ -190,7 +192,7 @@ export default function CustomerNameModal({
               
               {sessionWhatsapp && (
                 <p className="text-xs text-green-600 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
-                  ✅ Usando o número da sua sessão
+                  ✅ Usando número da sua sessão
                 </p>
               )}
               
@@ -223,7 +225,7 @@ export default function CustomerNameModal({
               
               {hasWhatsappChanged && (
                 <div className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
-                  ⚠️ Número atualizado. Usaremos este para contato.<br />
+                  ⚠️ Número atualizado para contato<br />
                   <span className="text-gray-600">Original: {originalWhatsapp}</span>
                 </div>
               )}
