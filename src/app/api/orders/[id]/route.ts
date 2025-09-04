@@ -10,15 +10,29 @@ export async function PATCH(
     const { id } = resolvedParams
     const body = await request.json()
     
-    // Verificar se o pedido existe
-    const existingOrder = await prisma.order.findUnique({
-      where: { id }
-    })
-
-    if (!existingOrder) {
+    // Verificar se o pedido existe usando query segura (evita erro de campos inexistentes)
+    let existingOrder
+    try {
+      const result = await prisma.$queryRaw`
+        SELECT id, "customerId", status, "confirmedAt", "completedAt", subtotal, discount
+        FROM "Order" 
+        WHERE id = ${id}::text 
+        LIMIT 1
+      ` as any[]
+      
+      if (!result || result.length === 0) {
+        return NextResponse.json(
+          { error: 'Pedido não encontrado' },
+          { status: 404 }
+        )
+      }
+      
+      existingOrder = result[0]
+    } catch (error: any) {
+      console.error('Erro ao buscar pedido:', error)
       return NextResponse.json(
-        { error: 'Pedido não encontrado' },
-        { status: 404 }
+        { error: 'Erro interno ao buscar pedido' },
+        { status: 500 }
       )
     }
 

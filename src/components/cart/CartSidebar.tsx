@@ -149,7 +149,7 @@ export function CartSidebar() {
       // Primeiro: criar o pedido com os dados básicos
       const orderPayload = {
         customer: {
-          name: 'Cliente Temporário', // Nome temporário
+          name: data.customerName, // Nome real do cliente
           whatsapp: data.originalWhatsapp,
           email: '' // Email vazio por enquanto
         },
@@ -176,18 +176,19 @@ export function CartSidebar() {
       const createdOrder = await createResponse.json()
       setCreatedOrderId(createdOrder.id)
       
-      // Segundo: atualizar o pedido com o nome do cliente
-      const updateResponse = await fetch(`/api/orders/${createdOrder.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerName: data.customerName,
-          finalWhatsapp: data.finalWhatsapp
+      // Segundo: atualizar o pedido com o WhatsApp final (se diferente do original)
+      if (data.finalWhatsapp !== data.originalWhatsapp) {
+        const updateResponse = await fetch(`/api/orders/${createdOrder.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            finalWhatsapp: data.finalWhatsapp
+          })
         })
-      })
 
-      if (!updateResponse.ok) {
-        throw new Error('Falha ao atualizar dados do cliente')
+        if (!updateResponse.ok) {
+          console.warn('Falha ao atualizar WhatsApp final, mas pedido foi criado com sucesso')
+        }
       }
 
       // Gerar próximo número de pedido
