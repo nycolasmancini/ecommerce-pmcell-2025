@@ -18,7 +18,7 @@ interface ProductCardProps {
     subname?: string
     description?: string
     brand?: string
-    category?: string
+    category?: string | { id: string; name: string; slug: string }
     image?: string
     images?: Array<{ id: string; url: string; isMain: boolean }>
     price: number
@@ -155,7 +155,8 @@ export default function ProductCard({ product, onSelectModels, onUnlockPrices }:
   // Handler para tracking de visualização do produto
   const handleProductView = () => {
     // Track product view
-    analytics.trackProductView(product.id, product.name, product.category || 'Produto')
+    const categoryName = typeof product.category === 'object' ? product.category.name : product.category || 'Produto'
+    analytics.trackProductView(product.id, product.name, categoryName)
     setShowDetailsModal(true)
   }
 
