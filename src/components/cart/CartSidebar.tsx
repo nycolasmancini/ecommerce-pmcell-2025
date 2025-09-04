@@ -21,7 +21,8 @@ export function CartSidebar() {
   const [orderData, setOrderData] = useState({
     subtotal: 0,
     itemsCount: 0,
-    customerName: ''
+    customerName: '',
+    finalWhatsapp: ''
   })
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
   const [previousUpgradesLength, setPreviousUpgradesLength] = useState(-1) // Start with -1 to detect initial state
@@ -194,10 +195,11 @@ export function CartSidebar() {
       // Gerar próximo número de pedido
       setCurrentOrderNumber(prev => prev + 1)
       
-      // Atualizar dados do pedido com o nome do cliente
+      // Atualizar dados do pedido com o nome do cliente e WhatsApp final
       setOrderData(prev => ({
         ...prev,
-        customerName: data.customerName
+        customerName: data.customerName,
+        finalWhatsapp: data.finalWhatsapp
       }))
       
       // Fechar modal de nome e mostrar tela de sucesso
@@ -812,6 +814,7 @@ export function CartSidebar() {
         subtotal={orderData.subtotal}
         itemsCount={orderData.itemsCount}
         customerName={orderData.customerName}
+        finalWhatsapp={orderData.finalWhatsapp}
       />
       
       {/* Toast notifications */}

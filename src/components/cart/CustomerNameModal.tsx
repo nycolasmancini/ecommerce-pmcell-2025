@@ -225,7 +225,7 @@ export default function CustomerNameModal({
               
               {hasWhatsappChanged && (
                 <div className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
-                  ⚠️ Número atualizado para contato<br />
+                  ⚠️ Número alterado para contato<br />
                   <span className="text-gray-600">Original: {originalWhatsapp}</span>
                 </div>
               )}

@@ -16,6 +16,7 @@ interface OrderCompletionSidebarProps {
   subtotal: number
   itemsCount: number
   customerName?: string
+  finalWhatsapp?: string
 }
 
 export function OrderCompletionSidebar({ 
@@ -25,7 +26,8 @@ export function OrderCompletionSidebar({
   orderNumber, 
   subtotal, 
   itemsCount,
-  customerName = ''
+  customerName = '',
+  finalWhatsapp
 }: OrderCompletionSidebarProps) {
   const { clearCart } = useCartStore()
   const { whatsapp } = useSession()
@@ -161,7 +163,7 @@ export function OrderCompletionSidebar({
             )}
 
             {/* WhatsApp Info */}
-            {whatsapp && (
+            {(finalWhatsapp || whatsapp) && (
               <div className="bg-green-50 rounded-xl p-4 border border-green-200 animate-in slide-in-from-left duration-300 delay-600">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
@@ -171,7 +173,7 @@ export function OrderCompletionSidebar({
                   </div>
                   <div>
                     <p className="text-sm font-medium text-green-600">WhatsApp confirmado</p>
-                    <p className="font-semibold text-green-900">{formatWhatsAppForDisplay(whatsapp)}</p>
+                    <p className="font-semibold text-green-900">{formatWhatsAppForDisplay(finalWhatsapp || whatsapp)}</p>
                   </div>
                 </div>
               </div>
