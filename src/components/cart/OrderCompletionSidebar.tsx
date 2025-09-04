@@ -173,7 +173,7 @@ export function OrderCompletionSidebar({
                   </div>
                   <div>
                     <p className="text-sm font-medium text-green-600">WhatsApp confirmado</p>
-                    <p className="font-semibold text-green-900">{formatWhatsAppForDisplay(finalWhatsapp || whatsapp)}</p>
+                    <p className="font-semibold text-green-900">{formatWhatsAppForDisplay(finalWhatsapp || whatsapp || '')}</p>
                   </div>
                 </div>
               </div>
