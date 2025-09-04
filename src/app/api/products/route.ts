@@ -8,6 +8,13 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const admin = searchParams.get('admin')
     
+    // Extract search parameters outside of conditional blocks for catch scope access
+    const categoryId = searchParams.get('categoryId')
+    const featured = searchParams.get('featured')
+    const search = searchParams.get('search')
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '12')
+    
     console.log('🔍 Products API called:', {
       NODE_ENV: process.env.NODE_ENV,
       admin: admin,
@@ -259,11 +266,6 @@ export async function GET(request: NextRequest) {
 
     // Em desenvolvimento, usar Prisma
     console.log('📊 Using development Prisma query path')
-    const categoryId = searchParams.get('categoryId')
-    const featured = searchParams.get('featured')
-    const search = searchParams.get('search')
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '12')
     const skip = (page - 1) * limit
 
     const where: any = {}
@@ -395,8 +397,8 @@ export async function GET(request: NextRequest) {
       // Aplicar filtros básicos aos dados mock
       let filteredProducts = [...mockProducts]
       
-      if (category) {
-        filteredProducts = filteredProducts.filter(p => p.categoryId === category)
+      if (categoryId) {
+        filteredProducts = filteredProducts.filter(p => p.categoryId === categoryId)
       }
       
       if (search) {
