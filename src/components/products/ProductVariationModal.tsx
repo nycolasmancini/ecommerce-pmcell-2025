@@ -488,47 +488,22 @@ export default function ProductVariationModal({ product, isOpen, onClose }: Prod
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05)'
         }}
       >
-        {/* Header */}
-        <div className="p-3 sm:p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-gray-50 to-white">
-          <div className="flex-1">
-            <h2 id="modal-title" className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{product.name}</h2>
-            {product.description && (
-              <p className="text-xs sm:text-sm text-gray-600 opacity-80">{product.description}</p>
-            )}
-          </div>
-          
-          {/* Resumo do total no header */}
-          <div className="flex items-center gap-6">
-            {models.length > 0 && (
-              <div className={`text-right transform transition-all duration-300 ease-out animate-slide-up ${
-                totalChanged ? 'scale-105 animate-pulse' : ''
-              }`}>
-                <p className="text-xs sm:text-sm text-gray-600 font-medium">
-                  Total: {totalItems} item{totalItems !== 1 ? 's' : ''}
-                </p>
-                <p className={`text-lg sm:text-xl font-bold text-blue-600 bg-blue-50 px-2 sm:px-3 py-1 rounded-lg transition-all duration-300 ${
-                  totalChanged ? 'bg-blue-100 shadow-lg' : ''
-                }`}>
-                  {formatPrice(totalValue)}
-                </p>
-              </div>
-            )}
-            
-            <button
-              onClick={handleClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200 ease-in-out transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              aria-label="Fechar modal"
-            >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+        {/* Header Minimalista */}
+        <div data-testid="modal-header" className="absolute top-0 right-0 z-50 p-2 sm:p-3 modal-header-glassmorphism rounded-bl-lg">
+          <button
+            onClick={handleClose}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-white/60 rounded-full transition-all duration-200 ease-in-out transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            aria-label="Fechar modal"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         
         {/* Scrollable Content with Sticky Headers */}
-        <div className="overflow-y-auto max-h-[calc(85vh-150px)] sm:max-h-[calc(90vh-200px)] custom-scrollbar modal-content-scroll relative">
+        <div className="overflow-y-auto max-h-[calc(85vh-120px)] sm:max-h-[calc(90vh-140px)] custom-scrollbar modal-content-scroll relative pt-4">
             
           {loading ? (
             <div className="text-center py-12 animate-fade-in">
@@ -544,19 +519,19 @@ export default function ProductVariationModal({ product, isOpen, onClose }: Prod
               </div>
             </div>
           ) : (
-            <div className="p-3 sm:p-6 pt-2 space-y-3 sm:space-y-6 animate-slide-up">
+            <div className="p-2 sm:p-4 pt-1 space-y-2 sm:space-y-4 animate-slide-up">
               {Object.entries(groupedModels)
                 .sort(([a], [b]) => a.localeCompare(b))
                 .map(([brandName, brandModels], index) => (
                 <div 
                   key={brandName} 
-                  className="border-b border-gray-200 last:border-b-0 sm:border sm:rounded-xl sm:shadow-sm sm:hover:shadow-md transition-all duration-300 ease-out sm:transform sm:hover:-translate-y-1"
+                  className="border-b border-gray-200 last:border-b-0 sm:border sm:rounded-lg sm:shadow-sm sm:hover:shadow-md transition-all duration-300 ease-out sm:transform sm:hover:-translate-y-1"
                   style={{animationDelay: `${index * 100}ms`}}
                 >
                   {/* Brand Header - Sticky */}
                   <button
                     onClick={() => toggleBrandExpansion(brandName)}
-                    className={`brand-header w-full px-3 sm:px-6 py-3 sm:py-5 transition-all duration-300 ease-out flex items-center justify-between text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset sticky top-0 z-30 ${
+                    className={`brand-header w-full px-2 sm:px-4 py-2 sm:py-3 transition-all duration-300 ease-out flex items-center justify-between text-left focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset sticky top-0 z-30 ${
                       expandedBrands[brandName] ? 'expanded' : 'collapsed'
                     }`}
                     style={{
@@ -631,6 +606,40 @@ export default function ProductVariationModal({ product, isOpen, onClose }: Prod
               ))}
             </div>
           )}
+        </div>
+
+        {/* Footer Sticky com informações do produto */}
+        <div data-testid="modal-footer" className="sticky bottom-0 left-0 right-0 z-40 modal-footer-animation">
+          <div className="modal-footer-glassmorphism p-2 sm:p-4">
+            <div className="flex items-center justify-between modal-footer-content">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-sm sm:text-lg font-bold text-gray-900 truncate mb-0.5 sm:mb-1">
+                  {product.name}
+                </h2>
+                {product.description && (
+                  <p className="text-xs text-gray-600 truncate opacity-75">
+                    {product.description}
+                  </p>
+                )}
+              </div>
+              
+              {/* Total do carrinho */}
+              {models.length > 0 && totalItems > 0 && (
+                <div className={`text-right ml-3 total-value-transition ${
+                  totalChanged ? 'changed' : ''
+                }`}>
+                  <p className="text-xs text-gray-600 font-medium">
+                    {totalItems} item{totalItems !== 1 ? 's' : ''}
+                  </p>
+                  <p className={`text-lg sm:text-xl font-bold text-blue-600 bg-blue-50/80 px-2 py-0.5 sm:px-3 sm:py-1 rounded-lg transition-all duration-300 ${
+                    totalChanged ? 'bg-blue-100/80 shadow-lg' : ''
+                  }`}>
+                    {formatPrice(totalValue)}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
       </div>

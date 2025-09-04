@@ -140,8 +140,8 @@ describe('ProductVariationModal', () => {
     })
   })
 
-  describe('Core functionality still works', () => {
-    it('should render product name and models correctly', async () => {
+  describe('New footer structure', () => {
+    it('should render product name in footer instead of header', async () => {
       render(
         <ProductVariationModal 
           product={mockProduct}
@@ -150,8 +150,93 @@ describe('ProductVariationModal', () => {
         />
       )
 
-      // Verificar nome do produto
-      expect(screen.getByText('Produto Teste')).toBeInTheDocument()
+      // Aguardar carregamento dos modelos
+      await waitFor(() => {
+        expect(screen.getByText('Marca A')).toBeInTheDocument()
+      })
+
+      // Verificar que nome do produto está no footer
+      const footer = document.querySelector('[data-testid="modal-footer"]')
+      expect(footer).toBeInTheDocument()
+      expect(footer).toHaveTextContent('Produto Teste')
+    })
+
+    it('should render total value in footer', async () => {
+      render(
+        <ProductVariationModal 
+          product={mockProduct}
+          isOpen={true}
+          onClose={jest.fn()}
+        />
+      )
+
+      // Aguardar carregamento
+      await waitFor(() => {
+        expect(screen.getByText('Marca A')).toBeInTheDocument()
+      })
+
+      // Footer deve conter informações de total
+      const footer = document.querySelector('[data-testid="modal-footer"]')
+      expect(footer).toBeInTheDocument()
+    })
+
+    it('should have minimalist header with only close button', async () => {
+      render(
+        <ProductVariationModal 
+          product={mockProduct}
+          isOpen={true}
+          onClose={jest.fn()}
+        />
+      )
+
+      // Header deve ter apenas o botão fechar
+      const closeButton = screen.getByLabelText('Fechar modal')
+      expect(closeButton).toBeInTheDocument()
+      
+      // Verificar que o header não contém mais o nome do produto
+      const header = document.querySelector('[data-testid="modal-header"]')
+      if (header) {
+        expect(header).not.toHaveTextContent('Produto Teste')
+      }
+    })
+
+    it('should have optimized spacing for model items', async () => {
+      render(
+        <ProductVariationModal 
+          product={mockProduct}
+          isOpen={true}
+          onClose={jest.fn()}
+        />
+      )
+
+      // Aguardar carregamento
+      await waitFor(() => {
+        expect(screen.getByText('Marca A')).toBeInTheDocument()
+      })
+
+      // Expandir marca para ver modelos
+      const brandButton = screen.getByText('Marca A')
+      brandButton.click()
+
+      await waitFor(() => {
+        expect(screen.getByText('Modelo 1')).toBeInTheDocument()
+      })
+
+      // Verificar que modelo tem classe de espaçamento otimizado
+      const modelItem = document.querySelector('.model-item')
+      expect(modelItem).toBeInTheDocument()
+    })
+  })
+
+  describe('Core functionality still works', () => {
+    it('should render models correctly', async () => {
+      render(
+        <ProductVariationModal 
+          product={mockProduct}
+          isOpen={true}
+          onClose={jest.fn()}
+        />
+      )
 
       // Aguardar carregamento dos modelos
       await waitFor(() => {

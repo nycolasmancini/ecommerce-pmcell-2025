@@ -1155,22 +1155,22 @@ input[type="number"] {
 
 .model-item {
   position: relative;
-  margin: 2px 8px;
-  padding: 8px;
+  margin: 1px 4px;
+  padding: 6px;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(229, 231, 235, 0.8);
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(229, 231, 235, 0.6);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 5; /* Lower than sticky headers (z-index: 30) */
 }
 
 @media (min-width: 640px) {
   .model-item {
-    margin: 8px 12px;
-    padding: 16px;
-    border-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin: 4px 8px;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   }
 }
 
@@ -1385,6 +1385,64 @@ body {
   user-select: none;
   /* Previne zoom em inputs no iOS */
   touch-action: manipulation;
+}
+
+/* Glassmorphism e Design Refinado para Modal de Variação */
+.modal-footer-glassmorphism {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(229, 231, 235, 0.3);
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header-glassmorphism {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+/* Animação suave para footer slide-up */
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-footer-animation {
+  animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Transição suave para valor total com scale */
+.total-value-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.total-value-transition.changed {
+  transform: scale(1.05);
+  filter: brightness(1.1);
+}
+
+/* Melhorar contraste e legibilidade do footer */
+.modal-footer-content {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Suavizar bordas dos model-items */
+.model-item {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.model-item:hover {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 /* Garantir que inputs não causem zoom automático */
