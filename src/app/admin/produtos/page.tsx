@@ -682,8 +682,6 @@ export default function AdminProdutos() {
                 </label>
                 
                 {/* Gerenciar imagens existentes (apenas quando editando) */}
-                {console.log('🚀 DEBUG: editingProduct:', editingProduct)}
-                {console.log('🚀 DEBUG: Condição ImageManager:', editingProduct && editingProduct.images && editingProduct.images.length > 0)}
                 {editingProduct && editingProduct.images && editingProduct.images.length > 0 && (
                   <div className="mt-3 mb-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
                     <ImageManager
