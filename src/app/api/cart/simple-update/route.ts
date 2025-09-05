@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 
 // Arquivo simples para armazenar carrinhos (fallback sem banco)
 const CARTS_FILE = path.join(process.cwd(), 'data', 'abandoned-carts.json')
@@ -106,7 +107,7 @@ async function syncCartWithVisit(sessionId: string, cartData: any, whatsapp?: st
       cartData: hasItems ? JSON.stringify({
         items: cartData.items,
         total: cartData.total
-      }) : null,
+      }) : Prisma.JsonNull,
       lastActivity: new Date(),
       whatsapp: whatsapp || undefined
     }
