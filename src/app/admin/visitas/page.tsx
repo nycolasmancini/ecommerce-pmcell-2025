@@ -42,26 +42,13 @@ export default function VisitasPage() {
   } = useVisitStore()
   
   const [showFilters, setShowFilters] = useState(false)
-  const [autoRefresh, setAutoRefresh] = useState(true)
   const [lastUpdate, setLastUpdate] = useState('')
   
-  // Carregar dados iniciais
+  // Carregar dados iniciais apenas uma vez
   useEffect(() => {
     fetchVisits()
     setLastUpdate(new Date().toLocaleTimeString('pt-BR'))
   }, [])
-  
-  // Auto-refresh a cada 30 segundos
-  useEffect(() => {
-    if (!autoRefresh) return
-    
-    const interval = setInterval(() => {
-      fetchVisits(pagination.page)
-      setLastUpdate(new Date().toLocaleTimeString('pt-BR'))
-    }, 30000)
-    
-    return () => clearInterval(interval)
-  }, [autoRefresh, pagination.page])
   
   const handleFilterChange = (newFilters: any) => {
     setFilters(newFilters)
@@ -126,18 +113,6 @@ export default function VisitasPage() {
             </div>
             
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => setAutoRefresh(!autoRefresh)}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  autoRefresh 
-                    ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${autoRefresh ? 'animate-spin' : ''}`} />
-                Auto-refresh {autoRefresh ? 'ON' : 'OFF'}
-              </button>
-              
               <button
                 onClick={() => {
                   fetchVisits(pagination.page)
