@@ -125,7 +125,6 @@ async function syncCartWithVisit(sessionId: string, cartData: any, whatsapp?: st
       update: upsertData,
       create: {
         sessionId,
-        whatsapp: whatsapp || null,
         ...upsertData,
         startTime: new Date()
       }
