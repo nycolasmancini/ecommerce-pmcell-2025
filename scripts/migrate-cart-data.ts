@@ -119,8 +119,7 @@ async function migrateCartData() {
     // Verificar dados migrados
     const visitsWithCart = await prisma.visit.findMany({
       where: {
-        hasCart: true,
-        cartData: { not: null }
+        hasCart: true
       },
       select: {
         sessionId: true,
