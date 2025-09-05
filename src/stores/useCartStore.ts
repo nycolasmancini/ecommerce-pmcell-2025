@@ -292,34 +292,46 @@ export const useCartStore = create<CartStore>()(
 
         try {
           const state = get()
-          if (state.items.length === 0) {
-            console.log('🛒 Store: Carrinho vazio, não sincronizando')
-            return
+          const analytics = useAnalytics()
+          
+          // Preparar dados do carrinho
+          const cartData = {
+            items: state.items.map(item => ({
+              id: item.id,
+              productId: item.productId,
+              name: item.name,
+              modelName: item.modelName,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice
+            })),
+            total: state.getSubtotal()
           }
-
-          // Buscar sessionId e analytics
-          const analytics = typeof window !== 'undefined' ? useAnalytics() : null
-          if (!analytics) return
-
-          const analyticsSnapshot = analytics.getSnapshot()
+          
+          // Preparar dados de analytics
+          const analyticsData = {
+            sessionId: analytics.sessionId,
+            timeOnSite: analytics.timeOnSite,
+            categoriesVisited: analytics.categoriesVisited,
+            searchTerms: analytics.searchTerms,
+            productsViewed: analytics.productsViewed,
+            whatsappCollected: analytics.whatsappCollected,
+            whatsappCollectedAt: analytics.whatsappCollectedAt
+          }
 
           const payload = {
-            sessionId: analyticsSnapshot.sessionId,
-            whatsapp: analyticsSnapshot.whatsappCollected,
-            cartData: {
-              items: state.items,
-              total: state.getSubtotal()
-            },
-            analyticsData: analyticsSnapshot,
-            lastActivity: Date.now()
+            sessionId: analytics.sessionId,
+            whatsapp: analytics.whatsappCollected,
+            cartData,
+            analyticsData
           }
 
-          console.log('🛒 Store: Sincronizando carrinho com servidor...', {
-            items: state.items.length,
-            total: state.getSubtotal()
+          console.log('🛒 Store: Sincronizando carrinho com servidor...', { 
+            sessionId: analytics.sessionId, 
+            items: cartData.items.length,
+            total: cartData.total 
           })
 
-          const response = await fetch('/api/cart/simple-update', {
+          const response = await fetch('/api/cart/sync', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -328,10 +340,11 @@ export const useCartStore = create<CartStore>()(
           })
 
           if (response.ok) {
+            const result = await response.json()
+            console.log('✅ Store: Carrinho sincronizado com sucesso', result)
             set({ lastSyncTimestamp: Date.now() })
-            console.log('✅ Store: Carrinho sincronizado com servidor')
           } else {
-            console.warn('⚠️ Store: Erro na sincronização:', response.status)
+            console.error('❌ Store: Erro ao sincronizar carrinho:', response.status)
           }
         } catch (error) {
           console.warn('⚠️ Store: Falha na sincronização:', error)

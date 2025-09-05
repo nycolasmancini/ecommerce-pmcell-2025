@@ -2,7 +2,7 @@ import { useEffect, useCallback } from 'react'
 import { useCartStore } from '@/stores/useCartStore'
 
 export function useCartSync() {
-  const { loadFromServer, isLoading, lastSyncTimestamp } = useCartStore()
+  const { loadFromServer, syncToServer, isLoading, lastSyncTimestamp } = useCartStore()
 
   // Carregar carrinho do servidor quando componente montar
   const initializeCart = useCallback(async () => {
@@ -34,9 +34,21 @@ export function useCartSync() {
     await initializeCart()
   }, [initializeCart])
 
+  // Função para sincronizar carrinho para o servidor
+  const forceSyncToServer = useCallback(async () => {
+    console.log('🔄 CartSync: Forçando sincronização para servidor...')
+    try {
+      await syncToServer()
+      console.log('✅ CartSync: Carrinho sincronizado para servidor')
+    } catch (error) {
+      console.error('❌ CartSync: Erro ao sincronizar para servidor:', error)
+    }
+  }, [syncToServer])
+
   return {
     isLoading,
     forceSync,
+    forceSyncToServer,
     lastSyncTimestamp
   }
 }

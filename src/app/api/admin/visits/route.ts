@@ -613,7 +613,12 @@ export async function POST(request: NextRequest) {
       console.log(`❌ Carrinho não encontrado em nenhuma fonte: ${sessionId}`)
       return NextResponse.json({
         success: false,
-        error: 'Carrinho não encontrado'
+        error: 'Carrinho não encontrado',
+        details: {
+          sessionId,
+          searchedIn: ['database', 'json-file'],
+          suggestion: 'O carrinho pode ter expirado ou não foi salvo corretamente. Verifique se o usuário tinha itens no carrinho e se a sessão está ativa.'
+        }
       }, { status: 404 })
     }
     

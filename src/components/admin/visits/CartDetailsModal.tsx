@@ -1,17 +1,18 @@
 'use client'
 
 import React from 'react'
-import { X, ShoppingCart, Clock, Search, Eye } from 'lucide-react'
+import { X, ShoppingCart, Clock, Search, Eye, AlertCircle, Package } from 'lucide-react'
 import { VisitCart, formatCurrency, formatSessionDuration } from '@/stores/useVisitStore'
 
 interface CartDetailsModalProps {
   cart: VisitCart | null
   isOpen: boolean
   onClose: () => void
+  error?: string | null
 }
 
-export default function CartDetailsModal({ cart, isOpen, onClose }: CartDetailsModalProps) {
-  if (!isOpen || !cart) return null
+export default function CartDetailsModal({ cart, isOpen, onClose, error }: CartDetailsModalProps) {
+  if (!isOpen) return null
   
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -47,6 +48,41 @@ export default function CartDetailsModal({ cart, isOpen, onClose }: CartDetailsM
         
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+          {/* Error State */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+              <div className="flex items-center gap-3 mb-3">
+                <AlertCircle className="w-5 h-5 text-red-500" />
+                <h3 className="font-medium text-red-800">Erro ao carregar carrinho</h3>
+              </div>
+              <p className="text-red-700 mb-3">{error}</p>
+              <div className="text-sm text-red-600 bg-red-100 rounded-md p-3">
+                <strong>Possíveis causas:</strong>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li>Carrinho pode ter expirado ou foi removido</li>
+                  <li>Sessão não foi salva corretamente no banco de dados</li>
+                  <li>Cliente não adicionou itens ao carrinho</li>
+                </ul>
+              </div>
+            </div>
+          )}
+          
+          {/* Empty Cart State */}
+          {!error && cart && (!cart.items || cart.items.length === 0) && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-12 text-center">
+              <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="font-medium text-gray-900 mb-2">Carrinho Vazio</h3>
+              <p className="text-gray-600 mb-4">
+                Este usuário não possui itens no carrinho ou o carrinho foi limpo.
+              </p>
+              <div className="text-sm text-gray-500">
+                Última atividade: {cart.lastActivity}
+              </div>
+            </div>
+          )}
+          
+          {/* Normal Cart Content */}
+          {!error && cart && cart.items && cart.items.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* Itens do Carrinho */}
@@ -209,6 +245,7 @@ export default function CartDetailsModal({ cart, isOpen, onClose }: CartDetailsM
               
             </div>
           </div>
+          )}
         </div>
         
         {/* Footer */}
