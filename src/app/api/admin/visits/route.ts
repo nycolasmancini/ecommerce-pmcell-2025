@@ -405,12 +405,41 @@ async function findCartInDatabase(sessionId: string): Promise<any | null> {
       return null
     }
     
-    // Se a visita tem carrinho mas não tem dados detalhados, criar dados básicos
+    // Parse dos dados do carrinho completo
+    let cartItems = []
+    let cartTotal = visit.cartValue || 0
+    
+    if (visit.cartData) {
+      try {
+        const parsedCartData = typeof visit.cartData === 'string' 
+          ? JSON.parse(visit.cartData) 
+          : visit.cartData
+        
+        if (parsedCartData && Array.isArray(parsedCartData.items)) {
+          cartItems = parsedCartData.items.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            modelName: item.modelName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.unitPrice * item.quantity
+          }))
+          
+          // Use total do cartData se disponível
+          if (parsedCartData.total) {
+            cartTotal = parsedCartData.total
+          }
+        }
+      } catch (parseError) {
+        console.error('Erro ao fazer parse do cartData:', parseError)
+      }
+    }
+    
     const cartData = {
       sessionId: visit.sessionId,
       whatsapp: visit.whatsapp,
-      items: [], // Dados básicos - não temos itens detalhados no banco atual
-      total: visit.cartValue || 0,
+      items: cartItems,
+      total: cartTotal,
       lastActivity: visit.lastActivity.toLocaleString('pt-BR'),
       analytics: {
         timeOnSite: visit.sessionDuration || 0,
@@ -426,7 +455,7 @@ async function findCartInDatabase(sessionId: string): Promise<any | null> {
       }
     }
     
-    console.log(`✅ Carrinho encontrado no banco: ${sessionId}`)
+    console.log(`✅ Carrinho encontrado no banco com ${cartItems.length} itens: ${sessionId}`)
     return cartData
     
   } catch (error) {

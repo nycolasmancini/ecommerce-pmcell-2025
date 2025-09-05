@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
+import { prisma } from '@/lib/prisma'
 
 // Arquivo simples para armazenar carrinhos (fallback sem banco)
 const CARTS_FILE = path.join(process.cwd(), 'data', 'abandoned-carts.json')
@@ -83,6 +84,48 @@ function validateCartData(cartData: any): boolean {
   )
 }
 
+// Função para sincronizar carrinho com a visita no banco
+async function syncCartWithVisit(sessionId: string, cartData: any, whatsapp?: string | null): Promise<void> {
+  try {
+    console.log(`🔄 Sincronizando carrinho com visita: ${sessionId}`)
+    
+    const hasItems = cartData.items && cartData.items.length > 0
+    
+    await prisma.visit.upsert({
+      where: { sessionId },
+      update: {
+        hasCart: hasItems,
+        cartValue: hasItems ? cartData.total : null,
+        cartItems: hasItems ? cartData.items.length : null,
+        cartData: hasItems ? JSON.stringify({
+          items: cartData.items,
+          total: cartData.total
+        }) : null,
+        lastActivity: new Date(),
+        whatsapp: whatsapp || undefined
+      },
+      create: {
+        sessionId,
+        whatsapp: whatsapp || null,
+        hasCart: hasItems,
+        cartValue: hasItems ? cartData.total : null,
+        cartItems: hasItems ? cartData.items.length : null,
+        cartData: hasItems ? JSON.stringify({
+          items: cartData.items,
+          total: cartData.total
+        }) : null,
+        lastActivity: new Date(),
+        startTime: new Date()
+      }
+    })
+    
+    console.log(`✅ Carrinho sincronizado com visita: ${sessionId}`)
+  } catch (error) {
+    console.error(`❌ Erro ao sincronizar carrinho com visita ${sessionId}:`, error)
+    // Não falhar a operação por erro na sincronização
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -129,6 +172,9 @@ export async function POST(request: NextRequest) {
       const filteredCarts = carts.filter(cart => cart.sessionId !== sessionId)
       saveCarts(filteredCarts)
       
+      // Sincronizar carrinho vazio com visita
+      await syncCartWithVisit(sessionId, cartData, whatsapp)
+      
       return NextResponse.json({ 
         message: 'Carrinho vazio removido',
         removed: true 
@@ -161,6 +207,9 @@ export async function POST(request: NextRequest) {
 
     // Salvar de volta
     saveCarts(carts)
+    
+    // Sincronizar carrinho com visita no banco
+    await syncCartWithVisit(sessionId, cartData, whatsapp)
 
     console.log(`🛒 Server: Carrinho salvo para sessionId: ${sessionId}`)
     console.log(`🛒 Server: ${cartData.items.length} itens, total: R$ ${cartData.total.toFixed(2)}, lastActivity: ${new Date(lastActivity || Date.now()).toLocaleTimeString()}`)

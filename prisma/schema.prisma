@@ -364,6 +364,7 @@ model Visit {
   hasCart           Boolean   @default(false)
   cartValue         Float?    // Valor do carrinho no final da sessão
   cartItems         Int?      // Quantidade de itens no carrinho
+  cartData          Json?     // Dados completos do carrinho (items detalhados)
   
   // Analytics
   lastActivity      DateTime  @default(now())

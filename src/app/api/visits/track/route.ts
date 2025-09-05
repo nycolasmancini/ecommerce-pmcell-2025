@@ -22,6 +22,15 @@ interface TrackingData {
     hasCart: boolean
     cartValue?: number
     cartItems?: number
+    items?: Array<{
+      id: string
+      productId: string
+      name: string
+      quantity: number
+      unitPrice: number
+      modelName?: string
+    }>
+    total?: number
   }
   status?: 'active' | 'abandoned' | 'completed'
   whatsappCollectedAt?: number | null
@@ -52,6 +61,12 @@ async function saveVisitToDatabase(trackingData: TrackingData): Promise<{ succes
       hasCart: Boolean(trackingData.cartData?.hasCart),
       cartValue: trackingData.cartData?.cartValue || null,
       cartItems: trackingData.cartData?.cartItems || null,
+      cartData: trackingData.cartData?.items && trackingData.cartData.items.length > 0 
+        ? JSON.stringify({
+            items: trackingData.cartData.items,
+            total: trackingData.cartData.total || trackingData.cartData.cartValue || 0
+          }) 
+        : null,
       lastActivity: new Date(),
       whatsappCollectedAt: trackingData.whatsappCollectedAt ? new Date(trackingData.whatsappCollectedAt) : null
     }
