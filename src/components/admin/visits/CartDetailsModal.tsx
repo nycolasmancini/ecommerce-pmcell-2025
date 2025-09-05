@@ -34,7 +34,7 @@ export default function CartDetailsModal({ cart, isOpen, onClose, error }: CartD
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Detalhes do Carrinho</h2>
-              <p className="text-sm text-gray-600">{cart.whatsapp}</p>
+              <p className="text-sm text-gray-600">{cart?.whatsapp || 'Telefone não informado'}</p>
             </div>
           </div>
           
