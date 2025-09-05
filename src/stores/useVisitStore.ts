@@ -101,7 +101,7 @@ interface VisitStore {
   
   // Métodos
   fetchVisits: (page?: number) => Promise<void>
-  fetchCartDetails: (sessionId: string) => Promise<void>
+  fetchCartDetails: (sessionId: string, retryCount?: number) => Promise<void>
   clearFilters: () => void
   
   // Utilitários
