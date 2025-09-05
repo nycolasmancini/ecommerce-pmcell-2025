@@ -496,7 +496,7 @@ async function findCartInDatabase(sessionId: string): Promise<any | null> {
                 totalPrice: (item.unitPrice || 0) * (item.quantity || 1)
               }))
               
-              cartTotal = cart.cartData.total || cartItems.reduce((sum: number, item) => sum + item.totalPrice, 0)
+              cartTotal = cart.cartData.total || cartItems.reduce((sum: number, item: any) => sum + item.totalPrice, 0)
               dataSource = 'json-file'
               console.log(`✅ [CART_FIND] Carrinho encontrado no arquivo - ${cartItems.length} itens, total: R$ ${cartTotal}`)
             } else {
