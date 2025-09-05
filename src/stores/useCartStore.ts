@@ -307,26 +307,27 @@ export const useCartStore = create<CartStore>()(
             total: state.getSubtotal()
           }
           
-          // Preparar dados de analytics
+          // Preparar dados de analytics usando getSnapshot()
+          const analyticsSnapshot = analytics.getSnapshot()
           const analyticsData = {
-            sessionId: analytics.sessionId,
-            timeOnSite: analytics.timeOnSite,
-            categoriesVisited: analytics.categoriesVisited,
-            searchTerms: analytics.searchTerms,
-            productsViewed: analytics.productsViewed,
-            whatsappCollected: analytics.whatsappCollected,
-            whatsappCollectedAt: analytics.whatsappCollectedAt
+            sessionId: analytics.getSessionId(),
+            timeOnSite: analyticsSnapshot.timeOnSite,
+            categoriesVisited: analyticsSnapshot.categoriesVisited,
+            searchTerms: analyticsSnapshot.searchTerms,
+            productsViewed: analyticsSnapshot.productsViewed,
+            whatsappCollected: analyticsSnapshot.whatsappCollected,
+            whatsappCollectedAt: analyticsSnapshot.whatsappCollectedAt
           }
 
           const payload = {
-            sessionId: analytics.sessionId,
-            whatsapp: analytics.whatsappCollected,
+            sessionId: analytics.getSessionId(),
+            whatsapp: analyticsSnapshot.whatsappCollected,
             cartData,
             analyticsData
           }
 
           console.log('🛒 Store: Sincronizando carrinho com servidor...', { 
-            sessionId: analytics.sessionId, 
+            sessionId: analytics.getSessionId(), 
             items: cartData.items.length,
             total: cartData.total 
           })
