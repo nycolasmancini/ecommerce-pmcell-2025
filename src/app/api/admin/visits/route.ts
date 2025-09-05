@@ -509,7 +509,7 @@ async function findCartInDatabase(sessionId: string): Promise<any | null> {
             }
           } else {
             console.log(`❌ [CART_FIND] SessionId não encontrado no arquivo`)
-            console.log(`❌ [CART_FIND] SessionIds disponíveis no arquivo:`, carts.map(c => c.sessionId))
+            console.log(`❌ [CART_FIND] SessionIds disponíveis no arquivo:`, carts.map((c: any) => c.sessionId))
           }
         } catch (fileError) {
           console.error(`❌ [CART_FIND] Erro ao ler arquivo JSON:`, fileError)
