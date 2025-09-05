@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
 // Interface para dados de tracking
@@ -66,7 +67,7 @@ async function saveVisitToDatabase(trackingData: TrackingData): Promise<{ succes
             items: trackingData.cartData.items,
             total: trackingData.cartData.total || trackingData.cartData.cartValue || 0
           }) 
-        : null,
+        : Prisma.JsonNull,
       lastActivity: new Date(),
       whatsappCollectedAt: trackingData.whatsappCollectedAt ? new Date(trackingData.whatsappCollectedAt) : null
     }
