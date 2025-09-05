@@ -240,14 +240,14 @@ export default function VisitasPage() {
             >
               <Filter className="w-4 h-4" />
               Filtros
-              {(filters.startDate || filters.endDate || filters.phone) && (
+              {(filters.startDate || filters.endDate || filters.phone || filters.hasContact) && (
                 <Badge variant="secondary" className="ml-2">
                   Ativos
                 </Badge>
               )}
             </button>
             
-            {(filters.startDate || filters.endDate || filters.phone) && (
+            {(filters.startDate || filters.endDate || filters.phone || filters.hasContact) && (
               <button
                 onClick={handleClearFilters}
                 className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
@@ -259,18 +259,41 @@ export default function VisitasPage() {
           </div>
           
           {showFilters && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-              <DateRangePicker
-                startDate={filters.startDate}
-                endDate={filters.endDate}
-                onStartDateChange={(date) => handleFilterChange({ startDate: date })}
-                onEndDateChange={(date) => handleFilterChange({ endDate: date })}
-              />
+            <div className="space-y-4 mb-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <DateRangePicker
+                  startDate={filters.startDate}
+                  endDate={filters.endDate}
+                  onStartDateChange={(date) => handleFilterChange({ startDate: date })}
+                  onEndDateChange={(date) => handleFilterChange({ endDate: date })}
+                />
+                
+                <PhoneSearchInput
+                  value={filters.phone}
+                  onChange={(phone) => handleFilterChange({ phone })}
+                />
+              </div>
               
-              <PhoneSearchInput
-                value={filters.phone}
-                onChange={(phone) => handleFilterChange({ phone })}
-              />
+              {/* Filtro Apenas com WhatsApp */}
+              <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
+                <button
+                  onClick={() => handleFilterChange({ hasContact: !filters.hasContact })}
+                  className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    filters.hasContact 
+                      ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <Eye className="w-4 h-4" />
+                  Apenas com WhatsApp
+                  {filters.hasContact && (
+                    <CheckCircle className="w-4 h-4" />
+                  )}
+                </button>
+                <span className="text-xs text-gray-500">
+                  {filters.hasContact ? 'Mostrando apenas visitas com telefone' : 'Mostrando todas as visitas'}
+                </span>
+              </div>
             </div>
           )}
           

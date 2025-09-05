@@ -20,19 +20,35 @@ export default function PhoneSearchInput({
   
   // Função para aplicar máscara de telefone durante digitação
   const formatPhoneInput = (input: string): string => {
+    // Se já começa com +55, preservar
+    if (input.startsWith('+55')) {
+      const numbersOnly = input.substring(3).replace(/\D/g, '')
+      
+      if (numbersOnly.length <= 2) {
+        return `+55 (${numbersOnly}`
+      } else if (numbersOnly.length <= 7) {
+        return `+55 (${numbersOnly.slice(0, 2)}) ${numbersOnly.slice(2)}`
+      } else if (numbersOnly.length <= 11) {
+        return `+55 (${numbersOnly.slice(0, 2)}) ${numbersOnly.slice(2, 7)}-${numbersOnly.slice(7)}`
+      } else {
+        // Limitar a 11 dígitos após +55
+        return `+55 (${numbersOnly.slice(0, 2)}) ${numbersOnly.slice(2, 7)}-${numbersOnly.slice(7, 11)}`
+      }
+    }
+    
     // Remove todos os caracteres não numéricos
     const cleanInput = input.replace(/\D/g, '')
     
     // Aplica formatação conforme o número de dígitos
     if (cleanInput.length <= 2) {
-      return cleanInput
+      return `+55 (${cleanInput}`
     } else if (cleanInput.length <= 7) {
-      return `(${cleanInput.slice(0, 2)}) ${cleanInput.slice(2)}`
+      return `+55 (${cleanInput.slice(0, 2)}) ${cleanInput.slice(2)}`
     } else if (cleanInput.length <= 11) {
-      return `(${cleanInput.slice(0, 2)}) ${cleanInput.slice(2, 7)}-${cleanInput.slice(7)}`
+      return `+55 (${cleanInput.slice(0, 2)}) ${cleanInput.slice(2, 7)}-${cleanInput.slice(7)}`
     } else {
       // Limitar a 11 dígitos
-      return `(${cleanInput.slice(0, 2)}) ${cleanInput.slice(2, 7)}-${cleanInput.slice(7, 11)}`
+      return `+55 (${cleanInput.slice(0, 2)}) ${cleanInput.slice(2, 7)}-${cleanInput.slice(7, 11)}`
     }
   }
   
@@ -125,10 +141,10 @@ export default function PhoneSearchInput({
       <div className="mt-3 text-xs text-gray-500">
         <p className="font-medium mb-1">Formatos aceitos:</p>
         <ul className="space-y-0.5 text-gray-400">
-          <li>• (11) 98765-4321</li>
+          <li>• +55 (11) 98765-4321</li>
           <li>• 11987654321</li>
+          <li>• (11) 98765-4321</li>
           <li>• 11 98765-4321</li>
-          <li>• 11-98765-4321</li>
           <li>• +55 11 98765-4321</li>
         </ul>
       </div>

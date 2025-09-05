@@ -28,27 +28,49 @@ interface TrackingData {
 }
 
 // Função para salvar visita no banco de dados
-async function saveVisitToDatabase(trackingData: TrackingData): Promise<boolean> {
+async function saveVisitToDatabase(trackingData: TrackingData): Promise<{ success: boolean; error?: string }> {
   try {
     console.log('🗃️ Salvando visita no banco de dados...')
+    console.log('📊 Session ID:', trackingData.sessionId)
+    console.log('📊 WhatsApp:', trackingData.whatsapp)
+    console.log('📊 Status:', trackingData.status)
     
+    // Validar dados essenciais
+    if (!trackingData.sessionId || typeof trackingData.sessionId !== 'string') {
+      console.error('❌ SessionId inválido:', trackingData.sessionId)
+      return { success: false, error: 'SessionId é obrigatório e deve ser string' }
+    }
+    
+    // Preparar dados com validação mais rigorosa
     const visitData = {
-      sessionId: trackingData.sessionId,
-      whatsapp: trackingData.whatsapp,
-      searchTerms: JSON.stringify(trackingData.searchTerms || []),
-      categoriesVisited: JSON.stringify(trackingData.categoriesVisited || []),
-      productsViewed: JSON.stringify(trackingData.productsViewed || []),
+      sessionId: trackingData.sessionId.trim(),
+      whatsapp: trackingData.whatsapp || null,
+      searchTerms: JSON.stringify(Array.isArray(trackingData.searchTerms) ? trackingData.searchTerms : []),
+      categoriesVisited: JSON.stringify(Array.isArray(trackingData.categoriesVisited) ? trackingData.categoriesVisited : []),
+      productsViewed: JSON.stringify(Array.isArray(trackingData.productsViewed) ? trackingData.productsViewed : []),
       status: trackingData.status || 'active',
-      hasCart: trackingData.cartData?.hasCart || false,
+      hasCart: Boolean(trackingData.cartData?.hasCart),
       cartValue: trackingData.cartData?.cartValue || null,
       cartItems: trackingData.cartData?.cartItems || null,
       lastActivity: new Date(),
       whatsappCollectedAt: trackingData.whatsappCollectedAt ? new Date(trackingData.whatsappCollectedAt) : null
     }
     
+    console.log('📊 Dados preparados para salvar:', {
+      sessionId: visitData.sessionId,
+      hasCart: visitData.hasCart,
+      cartValue: visitData.cartValue,
+      cartItems: visitData.cartItems
+    })
+    
+    // Testar conexão antes de fazer upsert
+    console.log('🔌 Testando conexão com banco...')
+    await prisma.$queryRaw`SELECT 1 as test`
+    console.log('✅ Conexão com banco OK')
+    
     const result = await prisma.visit.upsert({
       where: {
-        sessionId: trackingData.sessionId
+        sessionId: visitData.sessionId
       },
       update: {
         ...visitData,
@@ -63,11 +85,30 @@ async function saveVisitToDatabase(trackingData: TrackingData): Promise<boolean>
     })
     
     console.log('✅ Visita salva no banco:', result.id)
-    return true
+    return { success: true }
     
   } catch (error) {
-    console.error('❌ Erro ao salvar visita no banco:', error)
-    return false
+    console.error('❌ Erro detalhado ao salvar visita no banco:')
+    console.error('📋 Error type:', error?.constructor?.name)
+    console.error('📋 Error message:', error?.message)
+    console.error('📋 Error code:', (error as any)?.code)
+    console.error('📋 Error stack:', error?.stack)
+    
+    let errorMessage = 'Erro desconhecido ao salvar no banco'
+    
+    if (error?.message) {
+      if (error.message.includes('connect')) {
+        errorMessage = 'Erro de conexão com banco de dados'
+      } else if (error.message.includes('timeout')) {
+        errorMessage = 'Timeout na conexão com banco'
+      } else if (error.message.includes('constraint') || error.message.includes('unique')) {
+        errorMessage = 'Violação de constraint no banco'
+      } else {
+        errorMessage = error.message
+      }
+    }
+    
+    return { success: false, error: errorMessage }
   }
 }
 
@@ -93,13 +134,14 @@ export async function POST(request: NextRequest) {
     }
     
     // Salvar visita no banco de dados
-    const saveSuccess = await saveVisitToDatabase(trackingData)
+    const saveResult = await saveVisitToDatabase(trackingData)
     
-    if (!saveSuccess) {
-      console.error('❌ Falha ao salvar no banco!')
+    if (!saveResult.success) {
+      console.error('❌ Falha ao salvar no banco:', saveResult.error)
       return NextResponse.json({
         success: false,
-        error: 'Erro ao salvar dados de visita no banco'
+        error: saveResult.error || 'Erro ao salvar dados de visita no banco',
+        details: saveResult.error
       }, { status: 500 })
     }
     

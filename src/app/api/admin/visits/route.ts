@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 import { prisma } from '@/lib/prisma'
+import { formatPhoneNumber } from '@/stores/useVisitStore'
 
 // Interfaces para tipagem
 interface VisitData {
@@ -267,6 +268,7 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
     const phone = searchParams.get('phone')
+    const hasContact = searchParams.get('hasContact') === 'true'
     const page = parseInt(searchParams.get('page') || '1')
     const limit = 30 // 30 visitas por página
     
@@ -311,6 +313,13 @@ export async function GET(request: NextRequest) {
       })
     }
     
+    // Filtrar por contato (apenas visitas com WhatsApp) se fornecido
+    if (hasContact) {
+      visits = visits.filter(visit => {
+        return visit.whatsapp && visit.whatsapp.trim() !== ''
+      })
+    }
+    
     // Ordenar por data mais recente
     visits.sort((a, b) => b.startTime.getTime() - a.startTime.getTime())
     
@@ -326,7 +335,7 @@ export async function GET(request: NextRequest) {
       
       return {
         id: visit.sessionId,
-        whatsapp: visit.whatsapp ? visit.whatsapp.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3') : 'Não informado',
+        whatsapp: formatPhoneNumber(visit.whatsapp),
         whatsappRaw: visit.whatsapp,
         sessionTime: formatSessionTime(visit.sessionDuration || 0),
         sessionTimeSeconds: visit.sessionDuration || 0,
@@ -382,6 +391,50 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Função para buscar carrinho no banco de dados
+async function findCartInDatabase(sessionId: string): Promise<any | null> {
+  try {
+    console.log(`🔍 Buscando carrinho no banco para sessionId: ${sessionId}`)
+    
+    const visit = await prisma.visit.findUnique({
+      where: { sessionId }
+    })
+    
+    if (!visit || !visit.hasCart) {
+      console.log(`❌ Visita não encontrada ou sem carrinho no banco: ${sessionId}`)
+      return null
+    }
+    
+    // Se a visita tem carrinho mas não tem dados detalhados, criar dados básicos
+    const cartData = {
+      sessionId: visit.sessionId,
+      whatsapp: visit.whatsapp,
+      items: [], // Dados básicos - não temos itens detalhados no banco atual
+      total: visit.cartValue || 0,
+      lastActivity: visit.lastActivity.toLocaleString('pt-BR'),
+      analytics: {
+        timeOnSite: visit.sessionDuration || 0,
+        categoriesVisited: typeof visit.categoriesVisited === 'string' 
+          ? JSON.parse(visit.categoriesVisited) 
+          : visit.categoriesVisited || [],
+        searchTerms: typeof visit.searchTerms === 'string'
+          ? JSON.parse(visit.searchTerms).map((term: string, index: number) => ({ term, count: 1, lastSearch: Date.now() - index * 1000 }))
+          : (visit.searchTerms as any[])?.map((term, index) => ({ term, count: 1, lastSearch: Date.now() - index * 1000 })) || [],
+        productsViewed: typeof visit.productsViewed === 'string'
+          ? JSON.parse(visit.productsViewed)
+          : visit.productsViewed || []
+      }
+    }
+    
+    console.log(`✅ Carrinho encontrado no banco: ${sessionId}`)
+    return cartData
+    
+  } catch (error) {
+    console.error('Erro ao buscar no banco:', error)
+    return null
+  }
+}
+
 // Endpoint para obter detalhes do carrinho de uma visita específica
 export async function POST(request: NextRequest) {
   try {
@@ -394,10 +447,45 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
     
-    const carts = readCartsFromFile()
-    const cart = carts.find(c => c.sessionId === sessionId)
+    console.log(`🛒 Buscando detalhes do carrinho para sessionId: ${sessionId}`)
     
-    if (!cart) {
+    // Primeiro, tentar buscar no banco de dados
+    let cartData = await findCartInDatabase(sessionId)
+    
+    // Se não encontrar no banco, buscar no arquivo JSON
+    if (!cartData) {
+      console.log(`🔍 Buscando no arquivo JSON para sessionId: ${sessionId}`)
+      
+      const carts = readCartsFromFile()
+      const cart = carts.find(c => c.sessionId === sessionId)
+      
+      if (cart) {
+        console.log(`✅ Carrinho encontrado no arquivo JSON: ${sessionId}`)
+        cartData = {
+          sessionId: cart.sessionId,
+          whatsapp: cart.whatsapp,
+          items: cart.cartData.items.map(item => ({
+            id: item.id,
+            name: item.name,
+            modelName: item.modelName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.unitPrice * item.quantity
+          })),
+          total: cart.cartData.total,
+          lastActivity: new Date(typeof cart.lastActivity === 'string' ? cart.lastActivity : cart.lastActivity).toLocaleString('pt-BR'),
+          analytics: {
+            timeOnSite: Math.floor((cart.analyticsData.timeOnSite || 0) / 1000),
+            categoriesVisited: cart.analyticsData.categoriesVisited || [],
+            searchTerms: cart.analyticsData.searchTerms || [],
+            productsViewed: cart.analyticsData.productsViewed || []
+          }
+        }
+      }
+    }
+    
+    if (!cartData) {
+      console.log(`❌ Carrinho não encontrado em nenhuma fonte: ${sessionId}`)
       return NextResponse.json({
         success: false,
         error: 'Carrinho não encontrado'
@@ -407,26 +495,7 @@ export async function POST(request: NextRequest) {
     // Retornar detalhes do carrinho
     return NextResponse.json({
       success: true,
-      cart: {
-        sessionId: cart.sessionId,
-        whatsapp: cart.whatsapp,
-        items: cart.cartData.items.map(item => ({
-          id: item.id,
-          name: item.name,
-          modelName: item.modelName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.unitPrice * item.quantity
-        })),
-        total: cart.cartData.total,
-        lastActivity: new Date(typeof cart.lastActivity === 'string' ? cart.lastActivity : cart.lastActivity).toLocaleString('pt-BR'),
-        analytics: {
-          timeOnSite: Math.floor((cart.analyticsData.timeOnSite || 0) / 1000),
-          categoriesVisited: cart.analyticsData.categoriesVisited || [],
-          searchTerms: cart.analyticsData.searchTerms || [],
-          productsViewed: cart.analyticsData.productsViewed || []
-        }
-      }
+      cart: cartData
     })
     
   } catch (error) {

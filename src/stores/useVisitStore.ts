@@ -61,6 +61,7 @@ export interface VisitFilters {
   startDate: string | null
   endDate: string | null
   phone: string
+  hasContact: boolean
 }
 
 export interface VisitStats {
@@ -130,7 +131,8 @@ export const useVisitStore = create<VisitStore>((set, get) => ({
   filters: {
     startDate: null,
     endDate: null,
-    phone: ''
+    phone: '',
+    hasContact: false
   },
   isLoading: false,
   selectedCart: null,
@@ -165,6 +167,10 @@ export const useVisitStore = create<VisitStore>((set, get) => ({
       
       if (filters.phone) {
         params.append('phone', filters.phone)
+      }
+      
+      if (filters.hasContact) {
+        params.append('hasContact', 'true')
       }
       
       const response = await fetch(`/api/admin/visits?${params.toString()}`)
@@ -221,7 +227,8 @@ export const useVisitStore = create<VisitStore>((set, get) => ({
       filters: {
         startDate: null,
         endDate: null,
-        phone: ''
+        phone: '',
+        hasContact: false
       }
     })
     
@@ -253,19 +260,42 @@ export const useVisits = () => {
 
 // Utilitários para formatação
 export const formatPhoneNumber = (phone: string | null): string => {
-  if (!phone) return 'Não informado'
+  if (!phone || phone.trim() === '') return 'Não informado'
   
-  // Remover caracteres não numéricos
-  const cleanPhone = phone.replace(/\D/g, '')
-  
-  // Aplicar formatação brasileira
-  if (cleanPhone.length === 11) {
-    return cleanPhone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
-  } else if (cleanPhone.length === 10) {
-    return cleanPhone.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
+  // Se já tem código de país diferente de +55, manter original
+  if (phone.startsWith('+') && !phone.startsWith('+55')) {
+    return phone
   }
   
-  return phone
+  // Remover caracteres não numéricos, mas preservar + inicial
+  let cleanPhone = phone.replace(/[^\d+]/g, '')
+  
+  // Se já tem +55, remover duplicatas e manter apenas um
+  if (cleanPhone.includes('+55')) {
+    cleanPhone = cleanPhone.replace(/\+55/g, '')
+    cleanPhone = '55' + cleanPhone
+  }
+  
+  // Remover qualquer + restante
+  cleanPhone = cleanPhone.replace(/\+/g, '')
+  
+  // Se começar com 55 (código do Brasil), remover para processar
+  let brazilianNumber = cleanPhone
+  if (cleanPhone.startsWith('55') && cleanPhone.length >= 12) {
+    brazilianNumber = cleanPhone.substring(2)
+  }
+  
+  // Aplicar formatação brasileira
+  if (brazilianNumber.length === 11) {
+    // Celular: +55 (11) 98765-4321
+    return `+55 ${brazilianNumber.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')}`
+  } else if (brazilianNumber.length === 10) {
+    // Fixo: +55 (11) 3333-4444
+    return `+55 ${brazilianNumber.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')}`
+  }
+  
+  // Se não conseguir formatar, adicionar +55 ao número limpo
+  return `+55 ${brazilianNumber}`
 }
 
 export const formatCurrency = (value: number): string => {
