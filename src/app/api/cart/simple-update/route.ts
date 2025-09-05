@@ -87,41 +87,63 @@ function validateCartData(cartData: any): boolean {
 // Função para sincronizar carrinho com a visita no banco
 async function syncCartWithVisit(sessionId: string, cartData: any, whatsapp?: string | null): Promise<void> {
   try {
-    console.log(`🔄 Sincronizando carrinho com visita: ${sessionId}`)
+    console.log(`🔄 [SYNC] Iniciando sincronização - sessionId: ${sessionId}`)
+    console.log(`🔄 [SYNC] WhatsApp: ${whatsapp || 'null'}`)
+    console.log(`🔄 [SYNC] CartData recebido:`, JSON.stringify({
+      hasItems: cartData?.items?.length > 0,
+      itemsCount: cartData?.items?.length || 0,
+      total: cartData?.total || 0,
+      firstItem: cartData?.items?.[0]?.name || 'N/A'
+    }))
     
     const hasItems = cartData.items && cartData.items.length > 0
     
-    await prisma.visit.upsert({
+    // Preparar dados para upsert
+    const upsertData = {
+      hasCart: hasItems,
+      cartValue: hasItems ? cartData.total : null,
+      cartItems: hasItems ? cartData.items.length : null,
+      cartData: hasItems ? JSON.stringify({
+        items: cartData.items,
+        total: cartData.total
+      }) : null,
+      lastActivity: new Date(),
+      whatsapp: whatsapp || undefined
+    }
+    
+    console.log(`🔄 [SYNC] Dados preparados para upsert:`, JSON.stringify({
+      hasCart: upsertData.hasCart,
+      cartValue: upsertData.cartValue,
+      cartItems: upsertData.cartItems,
+      cartDataExists: !!upsertData.cartData,
+      whatsapp: upsertData.whatsapp
+    }))
+    
+    const result = await prisma.visit.upsert({
       where: { sessionId },
-      update: {
-        hasCart: hasItems,
-        cartValue: hasItems ? cartData.total : null,
-        cartItems: hasItems ? cartData.items.length : null,
-        cartData: hasItems ? JSON.stringify({
-          items: cartData.items,
-          total: cartData.total
-        }) : null,
-        lastActivity: new Date(),
-        whatsapp: whatsapp || undefined
-      },
+      update: upsertData,
       create: {
         sessionId,
         whatsapp: whatsapp || null,
-        hasCart: hasItems,
-        cartValue: hasItems ? cartData.total : null,
-        cartItems: hasItems ? cartData.items.length : null,
-        cartData: hasItems ? JSON.stringify({
-          items: cartData.items,
-          total: cartData.total
-        }) : null,
-        lastActivity: new Date(),
+        ...upsertData,
         startTime: new Date()
       }
     })
     
-    console.log(`✅ Carrinho sincronizado com visita: ${sessionId}`)
+    console.log(`✅ [SYNC] Carrinho sincronizado com sucesso - sessionId: ${sessionId}`)
+    console.log(`✅ [SYNC] Resultado do upsert:`, JSON.stringify({
+      id: result.id,
+      hasCart: result.hasCart,
+      cartValue: result.cartValue,
+      cartItems: result.cartItems,
+      cartDataExists: !!result.cartData,
+      whatsapp: result.whatsapp
+    }))
+    
   } catch (error) {
-    console.error(`❌ Erro ao sincronizar carrinho com visita ${sessionId}:`, error)
+    console.error(`❌ [SYNC ERROR] Erro ao sincronizar carrinho - sessionId: ${sessionId}`)
+    console.error(`❌ [SYNC ERROR] Detalhes do erro:`, error)
+    console.error(`❌ [SYNC ERROR] Stack trace:`, error instanceof Error ? error.stack : 'N/A')
     // Não falhar a operação por erro na sincronização
   }
 }

@@ -394,72 +394,151 @@ export async function GET(request: NextRequest) {
 // Função para buscar carrinho no banco de dados
 async function findCartInDatabase(sessionId: string): Promise<any | null> {
   try {
-    console.log(`🔍 Buscando carrinho no banco para sessionId: ${sessionId}`)
+    console.log(`🔍 [CART_FIND] Iniciando busca por carrinho - sessionId: ${sessionId}`)
     
     const visit = await prisma.visit.findUnique({
       where: { sessionId }
     })
     
-    if (!visit || !visit.hasCart) {
-      console.log(`❌ Visita não encontrada ou sem carrinho no banco: ${sessionId}`)
+    let cartItems = []
+    let cartTotal = 0
+    let dataSource = 'none'
+    
+    if (visit) {
+      console.log(`✅ [CART_FIND] Visit encontrada:`, JSON.stringify({
+        hasCart: visit.hasCart,
+        cartValue: visit.cartValue,
+        cartItems: visit.cartItems,
+        cartDataExists: !!visit.cartData,
+        whatsapp: visit.whatsapp
+      }))
+      
+      // Parse dos dados do carrinho completo
+      if (visit.cartData) {
+        console.log(`🔍 [CART_FIND] Processando cartData do banco...`)
+        
+        try {
+          const parsedCartData = typeof visit.cartData === 'string' 
+            ? JSON.parse(visit.cartData) 
+            : visit.cartData
+          
+          console.log(`🔍 [CART_FIND] CartData parseado:`, JSON.stringify({
+            hasItems: Array.isArray(parsedCartData?.items),
+            itemsCount: parsedCartData?.items?.length || 0,
+            total: parsedCartData?.total || 0
+          }))
+          
+          if (parsedCartData && Array.isArray(parsedCartData.items)) {
+            cartItems = parsedCartData.items.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              modelName: item.modelName,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.unitPrice * item.quantity
+            }))
+            
+            cartTotal = parsedCartData.total || visit.cartValue || 0
+            dataSource = 'database'
+            console.log(`✅ [CART_FIND] Carrinho encontrado no banco - ${cartItems.length} itens`)
+          }
+        } catch (parseError) {
+          console.error(`❌ [CART_FIND] Erro ao parsear cartData:`, parseError)
+        }
+      } else {
+        console.log(`⚠️ [CART_FIND] Visit existe mas cartData é null/empty`)
+      }
+    } else {
+      console.log(`⚠️ [CART_FIND] Nenhuma visit encontrada no banco`)
+    }
+    
+    // Se não encontrou no banco ou dados estão incompletos, SEMPRE tentar arquivo JSON
+    if (cartItems.length === 0) {
+      console.log(`🔍 [CART_FIND] Fallback: Buscando no arquivo JSON...`)
+      
+      if (fs.existsSync(CARTS_FILE)) {
+        console.log(`✅ [CART_FIND] Arquivo JSON encontrado: ${CARTS_FILE}`)
+        
+        try {
+          const data = fs.readFileSync(CARTS_FILE, 'utf8')
+          const carts = JSON.parse(data)
+          
+          console.log(`📦 [CART_FIND] Total de carrinhos no arquivo: ${carts.length}`)
+          
+          const cart = carts.find((c: any) => c.sessionId === sessionId)
+          
+          if (cart) {
+            console.log(`🔍 [CART_FIND] Carrinho encontrado no arquivo:`, JSON.stringify({
+              sessionId: cart.sessionId,
+              hasItems: cart.cartData?.items?.length > 0,
+              itemsCount: cart.cartData?.items?.length || 0,
+              total: cart.cartData?.total || 0
+            }))
+            
+            if (cart?.cartData?.items && Array.isArray(cart.cartData.items)) {
+              cartItems = cart.cartData.items.map((item: any) => ({
+                id: item.id,
+                name: item.name,
+                modelName: item.modelName,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                totalPrice: item.unitPrice * item.quantity
+              }))
+              
+              cartTotal = cart.cartData.total
+              dataSource = 'json-file'
+              console.log(`✅ [CART_FIND] Carrinho encontrado no arquivo - ${cartItems.length} itens`)
+            } else {
+              console.log(`⚠️ [CART_FIND] Carrinho no arquivo sem itens válidos`)
+            }
+          } else {
+            console.log(`❌ [CART_FIND] SessionId não encontrado no arquivo`)
+          }
+        } catch (fileError) {
+          console.error(`❌ [CART_FIND] Erro ao ler arquivo JSON:`, fileError)
+        }
+      } else {
+        console.log(`❌ [CART_FIND] Arquivo JSON não existe: ${CARTS_FILE}`)
+      }
+    }
+    
+    if (cartItems.length === 0) {
+      console.log(`❌ [CART_FIND] Nenhum carrinho encontrado em nenhuma fonte: ${sessionId}`)
       return null
     }
     
-    // Parse dos dados do carrinho completo
-    let cartItems = []
-    let cartTotal = visit.cartValue || 0
-    
-    if (visit.cartData) {
-      try {
-        const parsedCartData = typeof visit.cartData === 'string' 
-          ? JSON.parse(visit.cartData) 
-          : visit.cartData
-        
-        if (parsedCartData && Array.isArray(parsedCartData.items)) {
-          cartItems = parsedCartData.items.map((item: any) => ({
-            id: item.id,
-            name: item.name,
-            modelName: item.modelName,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            totalPrice: item.unitPrice * item.quantity
-          }))
-          
-          // Use total do cartData se disponível
-          if (parsedCartData.total) {
-            cartTotal = parsedCartData.total
-          }
-        }
-      } catch (parseError) {
-        console.error('Erro ao fazer parse do cartData:', parseError)
-      }
-    }
-    
     const cartData = {
-      sessionId: visit.sessionId,
-      whatsapp: visit.whatsapp,
+      sessionId: sessionId,
+      whatsapp: visit?.whatsapp || null,
       items: cartItems,
       total: cartTotal,
-      lastActivity: visit.lastActivity.toLocaleString('pt-BR'),
+      lastActivity: visit?.lastActivity?.toLocaleString('pt-BR') || 'N/A',
       analytics: {
-        timeOnSite: visit.sessionDuration || 0,
-        categoriesVisited: typeof visit.categoriesVisited === 'string' 
+        timeOnSite: visit?.sessionDuration || 0,
+        categoriesVisited: typeof visit?.categoriesVisited === 'string' 
           ? JSON.parse(visit.categoriesVisited) 
-          : visit.categoriesVisited || [],
-        searchTerms: typeof visit.searchTerms === 'string'
+          : visit?.categoriesVisited || [],
+        searchTerms: typeof visit?.searchTerms === 'string'
           ? JSON.parse(visit.searchTerms).map((term: string, index: number) => ({ term, count: 1, lastSearch: Date.now() - index * 1000 }))
-          : (visit.searchTerms as any[])?.map((term, index) => ({ term, count: 1, lastSearch: Date.now() - index * 1000 })) || [],
-        productsViewed: typeof visit.productsViewed === 'string'
+          : (visit?.searchTerms as any[])?.map((term, index) => ({ term, count: 1, lastSearch: Date.now() - index * 1000 })) || [],
+        productsViewed: typeof visit?.productsViewed === 'string'
           ? JSON.parse(visit.productsViewed)
-          : visit.productsViewed || []
+          : visit?.productsViewed || []
       }
     }
     
-    console.log(`✅ Carrinho encontrado no banco com ${cartItems.length} itens: ${sessionId}`)
+    console.log(`🎯 [CART_FIND] Resultado final:`, JSON.stringify({
+      itemsCount: cartItems.length,
+      total: cartTotal,
+      dataSource: dataSource,
+      sessionId: sessionId
+    }))
+    
     return cartData
     
   } catch (error) {
-    console.error('Erro ao buscar no banco:', error)
+    console.error(`❌ [CART_FIND_ERROR] Erro geral ao buscar carrinho:`, error)
+    console.error(`❌ [CART_FIND_ERROR] Stack trace:`, error instanceof Error ? error.stack : 'N/A')
     return null
   }
 }
