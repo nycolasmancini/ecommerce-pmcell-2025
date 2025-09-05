@@ -87,24 +87,25 @@ async function saveVisitToDatabase(trackingData: TrackingData): Promise<{ succes
     console.log('✅ Visita salva no banco:', result.id)
     return { success: true }
     
-  } catch (error) {
+  } catch (error: unknown) {
+    const err = error as Error
     console.error('❌ Erro detalhado ao salvar visita no banco:')
-    console.error('📋 Error type:', error?.constructor?.name)
-    console.error('📋 Error message:', error?.message)
+    console.error('📋 Error type:', err?.constructor?.name)
+    console.error('📋 Error message:', err?.message)
     console.error('📋 Error code:', (error as any)?.code)
-    console.error('📋 Error stack:', error?.stack)
+    console.error('📋 Error stack:', err?.stack)
     
     let errorMessage = 'Erro desconhecido ao salvar no banco'
     
-    if (error?.message) {
-      if (error.message.includes('connect')) {
+    if (err?.message) {
+      if (err.message.includes('connect')) {
         errorMessage = 'Erro de conexão com banco de dados'
-      } else if (error.message.includes('timeout')) {
+      } else if (err.message.includes('timeout')) {
         errorMessage = 'Timeout na conexão com banco'
-      } else if (error.message.includes('constraint') || error.message.includes('unique')) {
+      } else if (err.message.includes('constraint') || err.message.includes('unique')) {
         errorMessage = 'Violação de constraint no banco'
       } else {
-        errorMessage = error.message
+        errorMessage = err.message
       }
     }
     
