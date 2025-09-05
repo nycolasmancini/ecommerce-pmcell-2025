@@ -193,8 +193,11 @@ export const useVisitStore = create<VisitStore>((set, get) => ({
   },
   
   // Método para buscar detalhes do carrinho
-  fetchCartDetails: async (sessionId: string) => {
+  fetchCartDetails: async (sessionId: string, retryCount = 0) => {
+    const maxRetries = 2
     set({ isLoading: true })
+    
+    console.log(`🛒 [CART_FETCH] Iniciando busca de carrinho - sessionId: ${sessionId}, tentativa: ${retryCount + 1}/${maxRetries + 1}`)
     
     try {
       const response = await fetch('/api/admin/visits', {
@@ -205,19 +208,44 @@ export const useVisitStore = create<VisitStore>((set, get) => ({
         body: JSON.stringify({ sessionId })
       })
       
+      console.log(`🛒 [CART_FETCH] Resposta HTTP: ${response.status}`)
+      
       const data = await response.json()
       
-      if (data.success) {
+      if (data.success && data.cart) {
+        console.log(`✅ [CART_FETCH] Carrinho encontrado:`, {
+          sessionId: data.cart.sessionId,
+          itemsCount: data.cart.items?.length || 0,
+          total: data.cart.total
+        })
         set({ selectedCart: data.cart })
       } else {
-        console.error('Erro ao buscar detalhes do carrinho:', data.error)
+        console.error(`❌ [CART_FETCH] Falha na busca:`, data.error)
+        
+        // Retry se não é erro definitivo (não 400)
+        if (retryCount < maxRetries && response.status !== 400) {
+          console.log(`🔄 [CART_FETCH] Tentando novamente em 1s...`)
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          return get().fetchCartDetails(sessionId, retryCount + 1)
+        }
+        
         set({ selectedCart: null })
       }
     } catch (error) {
-      console.error('Erro na requisição de detalhes do carrinho:', error)
+      console.error(`❌ [CART_FETCH] Erro de rede:`, error)
+      
+      // Retry para erros de rede
+      if (retryCount < maxRetries) {
+        console.log(`🔄 [CART_FETCH] Retry por erro de rede em 1s...`)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        return get().fetchCartDetails(sessionId, retryCount + 1)
+      }
+      
       set({ selectedCart: null })
     } finally {
-      set({ isLoading: false })
+      if (retryCount === 0) { // Only clear loading on final attempt
+        set({ isLoading: false })
+      }
     }
   },
   

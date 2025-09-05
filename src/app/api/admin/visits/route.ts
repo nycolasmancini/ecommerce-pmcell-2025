@@ -394,7 +394,10 @@ export async function GET(request: NextRequest) {
 // Função para buscar carrinho no banco de dados
 async function findCartInDatabase(sessionId: string): Promise<any | null> {
   try {
-    console.log(`🔍 [CART_FIND] Iniciando busca por carrinho - sessionId: ${sessionId}`)
+    console.log(`🔍 [CART_FIND] === INICIANDO BUSCA DE CARRINHO ===`)
+    console.log(`🔍 [CART_FIND] SessionId solicitado: "${sessionId}"`)
+    console.log(`🔍 [CART_FIND] Tipo do sessionId: ${typeof sessionId}`)
+    console.log(`🔍 [CART_FIND] Comprimento: ${sessionId?.length || 'undefined'}`)
     
     const visit = await prisma.visit.findUnique({
       where: { sessionId }
@@ -405,13 +408,14 @@ async function findCartInDatabase(sessionId: string): Promise<any | null> {
     let dataSource = 'none'
     
     if (visit) {
-      console.log(`✅ [CART_FIND] Visit encontrada:`, JSON.stringify({
+      console.log(`✅ [CART_FIND] Visit encontrada no banco:`, JSON.stringify({
+        sessionId: visit.sessionId,
         hasCart: visit.hasCart,
         cartValue: visit.cartValue,
         cartItems: visit.cartItems,
         cartDataExists: !!visit.cartData,
-        whatsapp: visit.whatsapp
-      }))
+        whatsapp: visit.whatsapp?.substring(0, 8) + '***'
+      }, null, 2))
       
       // Parse dos dados do carrinho completo
       if (visit.cartData) {
@@ -454,7 +458,8 @@ async function findCartInDatabase(sessionId: string): Promise<any | null> {
     
     // Se não encontrou no banco ou dados estão incompletos, SEMPRE tentar arquivo JSON
     if (cartItems.length === 0) {
-      console.log(`🔍 [CART_FIND] Fallback: Buscando no arquivo JSON...`)
+      console.log(`🔍 [CART_FIND] === FALLBACK PARA ARQUIVO JSON ===`)
+      console.log(`🔍 [CART_FIND] Motivo: cartItems.length = ${cartItems.length}`)
       
       if (fs.existsSync(CARTS_FILE)) {
         console.log(`✅ [CART_FIND] Arquivo JSON encontrado: ${CARTS_FILE}`)
@@ -465,6 +470,11 @@ async function findCartInDatabase(sessionId: string): Promise<any | null> {
           
           console.log(`📦 [CART_FIND] Total de carrinhos no arquivo: ${carts.length}`)
           
+          // Log dos sessionIds disponíveis para debug
+          const availableSessionIds = carts.map((c: any) => c.sessionId).slice(0, 5)
+          console.log(`📋 [CART_FIND] SessionIds disponíveis (primeiros 5):`, availableSessionIds)
+          console.log(`📋 [CART_FIND] Buscando por: "${sessionId}"`)
+          
           const cart = carts.find((c: any) => c.sessionId === sessionId)
           
           if (cart) {
@@ -472,27 +482,34 @@ async function findCartInDatabase(sessionId: string): Promise<any | null> {
               sessionId: cart.sessionId,
               hasItems: cart.cartData?.items?.length > 0,
               itemsCount: cart.cartData?.items?.length || 0,
-              total: cart.cartData?.total || 0
+              total: cart.cartData?.total || 0,
+              whatsapp: cart.whatsapp?.substring(0, 8) + '***'
             }))
             
-            if (cart?.cartData?.items && Array.isArray(cart.cartData.items)) {
+            if (cart?.cartData?.items && Array.isArray(cart.cartData.items) && cart.cartData.items.length > 0) {
               cartItems = cart.cartData.items.map((item: any) => ({
-                id: item.id,
-                name: item.name,
-                modelName: item.modelName,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                totalPrice: item.unitPrice * item.quantity
+                id: item.id || item.productId || `item-${Date.now()}`,
+                name: item.name || 'Produto sem nome',
+                modelName: item.modelName || null,
+                quantity: item.quantity || 1,
+                unitPrice: item.unitPrice || 0,
+                totalPrice: (item.unitPrice || 0) * (item.quantity || 1)
               }))
               
-              cartTotal = cart.cartData.total
+              cartTotal = cart.cartData.total || cartItems.reduce((sum, item) => sum + item.totalPrice, 0)
               dataSource = 'json-file'
-              console.log(`✅ [CART_FIND] Carrinho encontrado no arquivo - ${cartItems.length} itens`)
+              console.log(`✅ [CART_FIND] Carrinho encontrado no arquivo - ${cartItems.length} itens, total: R$ ${cartTotal}`)
             } else {
-              console.log(`⚠️ [CART_FIND] Carrinho no arquivo sem itens válidos`)
+              console.log(`⚠️ [CART_FIND] Carrinho no arquivo sem itens válidos:`, {
+                hasCartData: !!cart.cartData,
+                hasItems: !!cart.cartData?.items,
+                isArray: Array.isArray(cart.cartData?.items),
+                itemsLength: cart.cartData?.items?.length || 0
+              })
             }
           } else {
             console.log(`❌ [CART_FIND] SessionId não encontrado no arquivo`)
+            console.log(`❌ [CART_FIND] SessionIds disponíveis no arquivo:`, carts.map(c => c.sessionId))
           }
         } catch (fileError) {
           console.error(`❌ [CART_FIND] Erro ao ler arquivo JSON:`, fileError)
