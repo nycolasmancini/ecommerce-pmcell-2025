@@ -70,19 +70,38 @@ function checkRateLimit(sessionId: string): boolean {
 // Validar dados do carrinho
 function validateCartData(cartData: any): boolean {
   if (!cartData || typeof cartData !== 'object') return false
-  if (!Array.isArray(cartData.items)) return false
-  if (typeof cartData.total !== 'number' || cartData.total < 0) return false
   
-  // Validar cada item
-  return cartData.items.every((item: any) => 
-    typeof item.id === 'string' &&
-    typeof item.productId === 'string' &&
-    typeof item.name === 'string' &&
-    typeof item.quantity === 'number' &&
-    typeof item.unitPrice === 'number' &&
-    item.quantity > 0 &&
-    item.unitPrice >= 0
-  )
+  // Verificar se é um estado Zustand wrapped (com .items diretamente)
+  const actualData = cartData.items ? cartData : (cartData.state || cartData)
+  
+  if (!Array.isArray(actualData.items)) return false
+  
+  // Total pode não existir se o carrinho estiver vazio, então aceitar >= 0 ou undefined
+  if (actualData.total !== undefined && (typeof actualData.total !== 'number' || actualData.total < 0)) {
+    return false
+  }
+  
+  // Se não houver itens, é válido (carrinho vazio)
+  if (actualData.items.length === 0) return true
+  
+  // Validar cada item - ser mais flexível com campos opcionais
+  return actualData.items.every((item: any) => {
+    // Campos obrigatórios mínimos
+    const hasRequiredFields = 
+      typeof item.name === 'string' &&
+      typeof item.quantity === 'number' &&
+      typeof item.unitPrice === 'number' &&
+      item.quantity > 0 &&
+      item.unitPrice >= 0
+    
+    // ID pode ser gerado se não existir
+    const hasValidId = !item.id || typeof item.id === 'string'
+    
+    // ProductId pode ser derivado do id se não existir
+    const hasValidProductId = !item.productId || typeof item.productId === 'string'
+    
+    return hasRequiredFields && hasValidId && hasValidProductId
+  })
 }
 
 // Função para sincronizar carrinho com a visita no banco
@@ -155,12 +174,12 @@ export async function POST(request: NextRequest) {
     const {
       sessionId,
       whatsapp,
-      cartData,
+      cartData: rawCartData,
       analyticsData,
       lastActivity
     } = body
 
-    if (!sessionId || !cartData) {
+    if (!sessionId || !rawCartData) {
       return NextResponse.json(
         { error: 'sessionId e cartData são obrigatórios' },
         { status: 400 }
@@ -176,10 +195,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Validar dados do carrinho
-    if (!validateCartData(cartData)) {
+    if (!validateCartData(rawCartData)) {
+      console.error('❌ Dados do carrinho inválidos:', JSON.stringify(rawCartData, null, 2))
       return NextResponse.json(
         { error: 'Dados do carrinho inválidos' },
         { status: 400 }
+      )
+    }
+
+    // Normalizar dados do carrinho (desembrulhar se vier do Zustand)
+    const cartData = rawCartData.items ? rawCartData : (rawCartData.state || rawCartData)
+    
+    // Garantir que todos os itens tenham productId
+    if (cartData.items) {
+      cartData.items = cartData.items.map((item: any) => ({
+        ...item,
+        id: item.id || `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        productId: item.productId || item.id || 'unknown'
+      }))
+    }
+    
+    // Calcular total se não existir
+    if (cartData.total === undefined && cartData.items && cartData.items.length > 0) {
+      cartData.total = cartData.items.reduce((sum: number, item: any) => 
+        sum + (item.quantity * item.unitPrice), 0
       )
     }
 

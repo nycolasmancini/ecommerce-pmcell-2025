@@ -1,4 +1,5 @@
 // Sistema de Analytics para tracking de comportamento do usuário
+import { analyticsLogger } from './analytics-logger'
 
 export interface UserAnalytics {
   sessionId: string
@@ -312,15 +313,44 @@ class Analytics {
         return
       }
 
-      const cartData = JSON.parse(cartStore)
+      const parsedCartStore = JSON.parse(cartStore)
+      // Zustand persist wrapper - pegar state se existir
+      const cartState = parsedCartStore.state || parsedCartStore
+      
+      // Validar e normalizar dados do carrinho
+      if (!cartState.items || !Array.isArray(cartState.items)) {
+        console.log('🛒 Analytics: Formato de carrinho inválido')
+        return
+      }
+      
+      // Preparar dados normalizados do carrinho
+      const normalizedCart = {
+        items: cartState.items.map((item: any) => ({
+          id: item.id || `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          productId: item.productId || item.id || 'unknown',
+          name: item.name || 'Produto sem nome',
+          modelName: item.modelName,
+          quantity: item.quantity || 1,
+          unitPrice: item.unitPrice || 0
+        })),
+        total: cartState.items.reduce((sum: number, item: any) => 
+          sum + ((item.quantity || 1) * (item.unitPrice || 0)), 0
+        )
+      }
       
       const payload = {
         sessionId: this.analytics.sessionId,
         whatsapp: this.analytics.whatsappCollected,
-        cartData: cartData.state || cartData, // Zustand persist pode ter .state wrapper
+        cartData: normalizedCart,
         analyticsData: this.getAnalyticsSnapshot(),
         lastActivity: this.analytics.lastCartActivity
       }
+
+      console.log('🛒 Analytics: Enviando carrinho normalizado para servidor:', {
+        sessionId: payload.sessionId,
+        itemsCount: normalizedCart.items.length,
+        total: normalizedCart.total
+      })
 
       // Salvar no servidor de forma assíncrona (não bloquear UI)
       fetch('/api/cart/simple-update', {

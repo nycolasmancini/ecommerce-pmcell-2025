@@ -441,5 +441,28 @@
     "webhookSentAt": null,
     "createdAt": "2025-08-19T16:41:01.844Z",
     "updatedAt": "2025-08-19T16:41:13.245Z"
+  },
+  {
+    "id": "cart_1757162092675",
+    "sessionId": "test_manual_001",
+    "whatsapp": "5511999999999",
+    "cartData": {
+      "items": [
+        {
+          "name": "Capa iPhone 15",
+          "quantity": 2,
+          "unitPrice": 29.9,
+          "id": "item_1757162092671_q06fplkzs",
+          "productId": "unknown"
+        }
+      ],
+      "total": 59.8
+    },
+    "analyticsData": null,
+    "lastActivity": "2025-09-06T12:34:52.675Z",
+    "webhookSent": false,
+    "webhookSentAt": null,
+    "createdAt": "2025-09-06T12:34:52.675Z",
+    "updatedAt": "2025-09-06T12:34:52.675Z"
   }
 ]

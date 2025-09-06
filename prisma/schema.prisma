@@ -388,3 +388,18 @@ model ShippingCompany {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// Configurações de webhooks
+model WebhookSettings {
+  id                  String   @id @default(cuid())
+  webhookType         String   @unique // whatsappCollected, orderCompleted, cartAbandoned, analyticsUpdate
+  enabled             Boolean  @default(true)
+  environment         String   @default("production") // production, development, test
+  url                 String?  // URL do webhook (opcional, usa padrão se não definido)
+  retryAttempts       Int      @default(3)
+  retryDelayMs        Int      @default(1000)
+  timeoutMs           Int      @default(30000)
+  headers             Json?    // Headers adicionais para o webhook
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
