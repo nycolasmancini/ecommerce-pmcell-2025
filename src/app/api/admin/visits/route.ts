@@ -127,6 +127,12 @@ async function readVisitsFromDatabase(): Promise<any[]> {
   try {
     console.log('🗃️ Lendo visitas do banco de dados...')
     
+    // Verificar se o Prisma está disponível
+    if (!prisma || !prisma.visit) {
+      console.warn('⚠️ Prisma não está disponível, retornando array vazio')
+      return []
+    }
+    
     const visits = await prisma.visit.findMany({
       orderBy: {
         startTime: 'desc'
@@ -134,34 +140,48 @@ async function readVisitsFromDatabase(): Promise<any[]> {
     })
     
     // Converter dados do banco para formato esperado
-    const formattedVisits = visits.map(visit => ({
-      sessionId: visit.sessionId,
-      whatsapp: visit.whatsapp,
-      startTime: visit.startTime,
-      lastActivity: visit.lastActivity,
-      searchTerms: typeof visit.searchTerms === 'string' 
-        ? JSON.parse(visit.searchTerms) 
-        : visit.searchTerms || [],
-      categoriesVisited: typeof visit.categoriesVisited === 'string'
-        ? JSON.parse(visit.categoriesVisited)
-        : visit.categoriesVisited || [],
-      productsViewed: typeof visit.productsViewed === 'string'
-        ? JSON.parse(visit.productsViewed)
-        : visit.productsViewed || [],
-      status: visit.status,
-      hasCart: visit.hasCart,
-      cartValue: visit.cartValue,
-      cartItems: visit.cartItems,
-      whatsappCollectedAt: visit.whatsappCollectedAt,
-      createdAt: visit.createdAt,
-      updatedAt: visit.updatedAt
-    }))
+    const formattedVisits = visits.map(visit => {
+      try {
+        return {
+          sessionId: visit.sessionId,
+          whatsapp: visit.whatsapp,
+          startTime: visit.startTime,
+          lastActivity: visit.lastActivity,
+          searchTerms: typeof visit.searchTerms === 'string' 
+            ? JSON.parse(visit.searchTerms) 
+            : visit.searchTerms || [],
+          categoriesVisited: typeof visit.categoriesVisited === 'string'
+            ? JSON.parse(visit.categoriesVisited)
+            : visit.categoriesVisited || [],
+          productsViewed: typeof visit.productsViewed === 'string'
+            ? JSON.parse(visit.productsViewed)
+            : visit.productsViewed || [],
+          status: visit.status,
+          hasCart: visit.hasCart,
+          cartValue: visit.cartValue,
+          cartItems: visit.cartItems,
+          cartData: visit.cartData,
+          whatsappCollectedAt: visit.whatsappCollectedAt,
+          createdAt: visit.createdAt,
+          updatedAt: visit.updatedAt
+        }
+      } catch (parseError) {
+        console.error('❌ Erro ao processar visita:', visit.sessionId, parseError)
+        return null
+      }
+    }).filter(Boolean) // Remove nulls
     
     console.log(`🗃️ ${formattedVisits.length} visitas encontradas no banco`)
     return formattedVisits
     
   } catch (error) {
     console.error('❌ Erro ao ler visitas do banco:', error)
+    console.error('❌ Detalhes do erro:', {
+      message: error instanceof Error ? error.message : 'Erro desconhecido',
+      code: (error as any)?.code,
+      name: error instanceof Error ? error.name : 'Unknown'
+    })
+    // Retornar array vazio em caso de erro para não quebrar o fluxo
     return []
   }
 }
